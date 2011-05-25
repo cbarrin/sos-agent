@@ -1,4 +1,5 @@
 #define SCTP_PORT 9876
+#define TCP_PORT "9877"
 #define MAX_BUFFER 1024
 
 enum { 
