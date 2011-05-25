@@ -1,0 +1,10 @@
+#define SCTP_PORT 9876
+#define MAX_BUFFER 1024
+
+enum { 
+	STREAM0 = 0, 
+	STREAM1, 
+	STREAM2, 
+	STREAM3, 
+	STREAM4 
+};
