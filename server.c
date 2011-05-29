@@ -11,70 +11,37 @@
 #include <netinet/sctp.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <pthread.h>
 
 #include "common.h"
+#include "datatypes.h"
+#include "list.h"
+#include "tcp_thread.h"
 
 
 int main( int argc, char **argv) { 
 	
-		int sctp_listen_sock, sctp_conn_sock; 
+		int sctp_listen_sock, sctp_conn_sock, flags; 
 		struct sockaddr_in servaddr; 
 		struct sctp_initmsg initmsg; 
+		struct sctp_event_subscribe events;
 		char buffer[MAX_BUFFER]; 
 		struct sockaddr_storage their_addr; 
+		struct sctp_sndrcvinfo sndrcvinfo; 
 		socklen_t sin_size; 
+		int size; 
 
 
-		int tcp_listen_sock, tcp_conn_sock; 
-		struct addrinfo hints, *servinfo, *p; 
-		//struct sigaction sa; 
-		int yes=1; 
-		//char s[INET6_ADDRSTRLEN]; 
-		int ret; 
+		pthread_t tcp_list_thread; 
 
-		memset(&hints, 0, sizeof(hints)); 
-		hints.ai_family = AF_UNSPEC; 
-		hints.ai_socktype = SOCK_STREAM; 
-		hints.ai_flags = AI_PASSIVE; // use my IP
+		
 
 
-		/*************** TCP STUFF ********************/ 
-		if (( ret = getaddrinfo(NULL, TCP_PORT, &hints, &servinfo)) != 0) {
-			printf("getaddrinfo: %s\n", gai_strerror(ret)); 
-			return EXIT_FAILURE; 
-		}
-	
-		/* Loop though all the results and vind to first one we can */ 
-		for( p = servinfo; p != NULL; p = p->ai_next) { 
-			if (( tcp_listen_sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) { 
-				perror("server: socket_tcp"); 
-				continue; 
-			}
-			if( setsockopt(tcp_listen_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) { 
-				perror("server: setsockopt_tcp"); 
-				return EXIT_FAILURE; 
-			}
-			if(bind(tcp_listen_sock, p->ai_addr, p->ai_addrlen) == -1) { 
-				perror("server: bind_tcp"); 
-				continue; 
-			}
-			break; 
-		}
+		/************** Set up linked list *************/ 
+		stream_list_t *stream_list = create_stream_list(NUM_STREAMS); 
 
-		if( p == NULL) { 
-			printf("TCP FAILED TO BIND!!!\n"); 	
-			return EXIT_FAILURE; 
-		}
-
-		freeaddrinfo(servinfo); 
-
-		if(listen(tcp_listen_sock, 10) == -1) { 
-			perror("server: listen_tcp"); 
-			return EXIT_FAILURE; 
-		}
 
 		/*************** SCTP STUFF ********************/ 
-
 
 		/* creates SCTP Socket */ 
 		if((sctp_listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == -1) { 
@@ -95,14 +62,15 @@ int main( int argc, char **argv) {
 		/* specify that a maximum of 5 streams will be available per socket */ 
 		
 		memset( &initmsg, 0, sizeof(initmsg)); 
-		initmsg.sinit_num_ostreams = 5; 
-		initmsg.sinit_max_instreams = 5; 
-		initmsg.sinit_max_attempts = 4; 
+		initmsg.sinit_num_ostreams = NUM_STREAMS; 
+		initmsg.sinit_max_instreams = NUM_STREAMS; 
+		initmsg.sinit_max_attempts = NUM_STREAMS -1; 
 
 		if(setsockopt( sctp_listen_sock, IPPROTO_SCTP, SCTP_INITMSG, &initmsg, sizeof(initmsg)) == -1) { 
 			perror("server setsockopt"); 
 			return EXIT_SUCCESS; 
 		}
+
 
 		/* place the server socket into the listen state */ 
 
@@ -111,30 +79,55 @@ int main( int argc, char **argv) {
 		sin_size = sizeof(their_addr); 
 		while(1) { 
 			printf("Waiting for new connection\n"); 
-		
-			
-			if((tcp_conn_sock = accept(tcp_listen_sock, (struct sockaddr *) &their_addr, &sin_size)) == -1) { 
-				perror("server: accept tcp"); 	
-				/* FIXME This shouldn't kill the server if accept fails */ 
-				return EXIT_FAILURE; 
-			}
-
-			if(recv(tcp_conn_sock, buffer, MAX_BUFFER, 0) == -1) { 
-				perror("server: recv_tcp"); 
-				/* FIXME: don't need to kill server here ! */ 
-				return EXIT_FAILURE; 
-			}
-			printf("TCP %s\n", buffer); 
-
 
 			if((sctp_conn_sock = accept( sctp_listen_sock, (struct sockaddr *) &their_addr, &sin_size)) == -1) { 
 				perror("server: accept"); 
-				return EXIT_SUCCESS; 
+				return EXIT_FAILURE; 
 			}
-		//	strcpy(buffer, "Hello world!"); 
+/*
+		memset( (void *) &events, 0, sizeof(events)); 
+		events.sctp_data_io_event = 1; 
+		if(setsockopt(sctp_conn_sock, SOL_SCTP, SCTP_EVENTS, (const void *) &events, sizeof(events)) == -1) { 	
+			perror("server: setscokopt"); 
+			return EXIT_FAILURE; 
+		} 
+*/  
+	
+	struct sctp_status status;
+	int in = sizeof(status); 
+	if(getsockopt( sctp_conn_sock, SOL_SCTP, SCTP_STATUS, (void *) &status, (socklen_t *) &in) == -1) { 
+		perror("client: getsockopt"); 
+		return EXIT_FAILURE; 
+	}
+
+	printf("assoc id    = %d\n", status.sstat_assoc_id ); 
+	printf("state       = %d\n", status.sstat_state ); 
+	printf("instrms     = %d\n", status.sstat_instrms ); 
+	printf("outstrms = %d\n", status.sstat_outstrms); 
+
+
+			pthread_create(&tcp_list_thread, NULL, connect_send_tcp_data, (void *) stream_list); 
+
+
+			while (1) { 
+				memset(buffer, 0, sizeof(buffer)); 
+				if(( size = sctp_recvmsg( sctp_conn_sock, (void *)buffer, sizeof(buffer), 
+						(struct sockaddr *) NULL, 0, &sndrcvinfo, &flags)) == -1) { 
+						perror("server: sctp_recvmsg"); 
+						/* FIXME probably don't need to exit */ 
+						return EXIT_FAILURE; 
+				}
+#define DEBUG 1
+#ifdef DEBUG
+				printf("added [%s] size [%d] from stream %d\n", (char *) buffer, size, sndrcvinfo.sinfo_stream); 
+#endif 
+				add_data_to_list(&stream_list->stream[ (sndrcvinfo.sinfo_stream) ], buffer, size); 
+			}
+			/*
 			if(sctp_sendmsg(sctp_conn_sock, (void *)buffer, strlen(buffer), NULL, 0, 0, 0, STREAM0, 0, 0) == -1) { 
 				perror("server: sctp_sendmsg"); 
 			}
+			*/
 		} 
 	close(sctp_conn_sock); 
 	return EXIT_SUCCESS; 
