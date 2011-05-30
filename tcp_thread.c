@@ -65,7 +65,7 @@ void * connect_send_tcp_data(void *ptr) {
 
 			pthread_mutex_lock(&stream_mutex); 
 
-			while (stream_empty( &stream_list->stream[stream]))    
+			while (stream_empty( &stream_list->stream[stream]) == 0 )    
 				pthread_cond_wait(&stream_data_mutex, &stream_mutex); 
 				
 			data = pop_head_stream_data(&stream_list->stream[stream]); 	
