@@ -69,6 +69,7 @@ void * connect_send_tcp_data(void *ptr) {
 				pthread_cond_wait(&stream_data_mutex, &stream_mutex); 
 				
 			data = pop_head_stream_data(&stream_list->stream[stream]); 	
+			pthread_mutex_unlock(&stream_mutex); 
 
 			if(send(tcp_conn_sock, data->data, data->len,0) == -1) { 
 				perror("send_tcp_data: send"); 
@@ -76,7 +77,6 @@ void * connect_send_tcp_data(void *ptr) {
 			free(data->data); 
 			free(data); 
 			
-			pthread_mutex_unlock(&stream_mutex); 
 		} 
 	}
 
