@@ -17,6 +17,9 @@
 #include "datatypes.h"
 #include "list.h"
 
+extern pthread_mutex_t stream_mutex;
+extern pthread_cond_t stream_data_mutex; 
+
 
 void * connect_send_tcp_data(void *ptr) { 
 	stream_list_t *stream_list = (stream_list_t *) ptr; 
@@ -26,8 +29,7 @@ void * connect_send_tcp_data(void *ptr) {
 	struct addrinfo hints, *servinfo, *p;
 	int ret;
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_family = AF_UNSPEC; hints.ai_socktype = SOCK_STREAM;
 	int stream; 
 
 	/* Make TCP CONNECTION */ 
@@ -60,13 +62,21 @@ void * connect_send_tcp_data(void *ptr) {
 	while(1)  { 
 		for(stream = 0; stream < NUM_STREAMS; stream++) { 
 			/* this maybe to aggressive, perhaps add usleep later? */ 
-			while (!stream_empty( &stream_list->stream[stream]));   
+
+			pthread_mutex_lock(&stream_mutex); 
+
+			while (stream_empty( &stream_list->stream[stream]))    
+				pthread_cond_wait(&stream_data_mutex, &stream_mutex); 
+				
 			data = pop_head_stream_data(&stream_list->stream[stream]); 	
+
 			if(send(tcp_conn_sock, data->data, data->len,0) == -1) { 
 				perror("send_tcp_data: send"); 
 			}
 			free(data->data); 
 			free(data); 
+			
+			pthread_mutex_unlock(&stream_mutex); 
 		} 
 	}
 

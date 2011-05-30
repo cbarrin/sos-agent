@@ -18,9 +18,12 @@
 #include "list.h"
 #include "tcp_thread.h"
 
+pthread_mutex_t stream_mutex;
+pthread_cond_t stream_data_mutex; 
+
 
 int main( int argc, char **argv) { 
-	
+
 		int sctp_listen_sock, sctp_conn_sock, flags=0; 
 		struct sockaddr_in servaddr; 
 		struct sctp_initmsg initmsg; 
@@ -33,6 +36,8 @@ int main( int argc, char **argv) {
 
 
 		pthread_t tcp_list_thread; 
+		pthread_mutex_init(&stream_mutex, NULL); 
+		pthread_cond_init(&stream_data_mutex, NULL); 
 
 		
 
@@ -128,7 +133,28 @@ int main( int argc, char **argv) {
 #ifdef DEBUG
 				printf("added [%s] size [%d] from stream %d\n", (char *) buffer, size, sndrcvinfo.sinfo_stream); 
 #endif 
+
+
+
+
+				pthread_mutex_lock(&stream_mutex); 
 				add_data_to_list(&stream_list->stream[ (sndrcvinfo.sinfo_stream) ], buffer, size); 
+				pthread_cond_signal(&stream_data_mutex); 	
+				pthread_mutex_unlock(&stream_mutex); 
+
+				//stream_index++; 
+				
+		/*		for(count = 0; count < stream_index; count++) { 
+					if(list_of_stream_data[count] == last_stream) {  	
+						pthread_cond_signal(&stream_data_mutex); 
+						list_of_stream_data[count] = -1; 	
+						last_stream++; 
+						last_stream %=NUM_STREAMS; 
+						break; 
+					}
+ 				}
+		*/ 
+				
 			}
 			/*
 			if(sctp_sendmsg(sctp_conn_sock, (void *)buffer, strlen(buffer), NULL, 0, 0, 0, STREAM0, 0, 0) == -1) { 
