@@ -65,6 +65,8 @@ void * connect_send_tcp_data(void *ptr) {
 			if(send(tcp_conn_sock, data->data, data->len,0) == -1) { 
 				perror("send_tcp_data: send"); 
 			}
+			free(data->data); 
+			free(data); 
 		} 
 	}
 

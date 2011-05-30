@@ -94,17 +94,19 @@ int main( int argc, char **argv) {
 				return EXIT_FAILURE; 
 			}
 
-	struct sctp_status status;
-	int in = sizeof(status); 
-	if(getsockopt( sctp_conn_sock, SOL_SCTP, SCTP_STATUS, (void *) &status, (socklen_t *) &in) == -1) { 
-		perror("client: getsockopt"); 
-		return EXIT_FAILURE; 
-	}
+#ifdef DEBUG
+			struct sctp_status status;
+			int in = sizeof(status); 
+			if(getsockopt( sctp_conn_sock, SOL_SCTP, SCTP_STATUS, (void *) &status, (socklen_t *) &in) == -1) { 
+				perror("client: getsockopt"); 
+				return EXIT_FAILURE; 
+			}
 
-	printf("assoc id    = %d\n", status.sstat_assoc_id ); 
-	printf("state       = %d\n", status.sstat_state ); 
-	printf("instrms     = %d\n", status.sstat_instrms ); 
-	printf("outstrms = %d\n", status.sstat_outstrms); 
+			printf("assoc id    = %d\n", status.sstat_assoc_id ); 
+			printf("state       = %d\n", status.sstat_state ); 
+			printf("instrms     = %d\n", status.sstat_instrms ); 
+			printf("outstrms = %d\n", status.sstat_outstrms); 
+#endif 
 
 
 			pthread_create(&tcp_list_thread, NULL, connect_send_tcp_data, (void *) stream_list); 
@@ -118,7 +120,11 @@ int main( int argc, char **argv) {
 						/* FIXME probably don't need to exit */ 
 						return EXIT_FAILURE; 
 				}
-#define DEBUG 1
+				if(size == 0) { 
+					printf("Other side ended connection!\n"); 
+					/* FIXME */ 
+					return EXIT_SUCCESS; 
+				} 
 #ifdef DEBUG
 				printf("added [%s] size [%d] from stream %d\n", (char *) buffer, size, sndrcvinfo.sinfo_stream); 
 #endif 

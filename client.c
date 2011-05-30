@@ -158,12 +158,17 @@ int main( int argc, char **argv) {
 			/* FIXME don't need to exit here  on failure */ 
 			return EXIT_FAILURE; 
 		}
+		if(size == 0) { 
+			printf("Otherside has closed tcp connection\n"); 
+			/* FIXME */ 
+			return EXIT_SUCCESS; 
+
+		} 
 
 		
 		if(sctp_sendmsg(sctp_conn_sock, (void *)buffer, size, NULL, 0, 0, 0, stream_rotate, 0, 0) == -1) { 
 			perror("client: sctp_sendmsg"); 
 		}
-#define DEBUG 1
 #ifdef DEBUG 
 	printf("send [%s] size [%zd] stream [%d]\n", buffer, size, stream_rotate); 
 #endif 
