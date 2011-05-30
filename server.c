@@ -74,6 +74,15 @@ int main( int argc, char **argv) {
 
 		/* place the server socket into the listen state */ 
 
+	
+		memset( (void *) &events, 0, sizeof(events)); 
+		events.sctp_data_io_event = 1; 
+
+		if(setsockopt(sctp_listen_sock, SOL_SCTP, SCTP_EVENTS, (const void *) &events, sizeof(events)) == -1) { 	
+			perror("server: setscokopt"); 
+			return EXIT_FAILURE; 
+		} 
+
 		listen (sctp_listen_sock, 5); 
 	
 		sin_size = sizeof(their_addr); 
@@ -84,15 +93,7 @@ int main( int argc, char **argv) {
 				perror("server: accept"); 
 				return EXIT_FAILURE; 
 			}
-/*
-		memset( (void *) &events, 0, sizeof(events)); 
-		events.sctp_data_io_event = 1; 
-		if(setsockopt(sctp_conn_sock, SOL_SCTP, SCTP_EVENTS, (const void *) &events, sizeof(events)) == -1) { 	
-			perror("server: setscokopt"); 
-			return EXIT_FAILURE; 
-		} 
-*/  
-	
+
 	struct sctp_status status;
 	int in = sizeof(status); 
 	if(getsockopt( sctp_conn_sock, SOL_SCTP, SCTP_STATUS, (void *) &status, (socklen_t *) &in) == -1) { 
