@@ -21,7 +21,7 @@
 
 int main( int argc, char **argv) { 
 	
-		int sctp_listen_sock, sctp_conn_sock, flags; 
+		int sctp_listen_sock, sctp_conn_sock, flags=0; 
 		struct sockaddr_in servaddr; 
 		struct sctp_initmsg initmsg; 
 		struct sctp_event_subscribe events;
