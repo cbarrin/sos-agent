@@ -118,7 +118,7 @@ int main( int argc, char **argv) {
 
 
 			while (1) { 
-				memset(buffer, 0, sizeof(buffer)); 
+				//memset(buffer, 0, sizeof(buffer)); 
 				if(( size = sctp_recvmsg( sctp_conn_sock, (void *)buffer, sizeof(buffer), 
 						(struct sockaddr *) NULL, 0, &sndrcvinfo, &flags)) == -1) { 
 						perror("server: sctp_recvmsg"); 
