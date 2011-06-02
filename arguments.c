@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <poll.h>
 
 #include "common.h"
 #include "datatypes.h"
@@ -67,11 +68,12 @@ void  allocate_options(options_t *options) {
 
 	options->p_listen_sock = malloc(sizeof(int) * options->num_parallel_sock); 	
 	options->p_conn_sock_server = malloc(sizeof(int) * options->num_parallel_sock); 
-	options->p_conn_sock_client = malloc(sizeof(int) * options->num_parallel_sock); 
+	//options->p_conn_sock_client = malloc(sizeof(int) * options->num_parallel_sock); 
+	options->poll_p_conn_sock_client = malloc(sizeof(struct pollfd) * options->num_parallel_sock); 
 	if( 
 		options->p_listen_sock == NULL || 
 		options->p_conn_sock_server == NULL || 
-		options->p_conn_sock_client == NULL) 
+		options->poll_p_conn_sock_client == NULL) 
 	{ 
 		printf("malloc failed!\n"); 		
 		exit(1); 

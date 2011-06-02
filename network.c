@@ -15,6 +15,7 @@
 #include <ctype.h> 
 #include <pthread.h>
 #include <arpa/inet.h>
+#include <poll.h>
 
 #include "common.h"
 #include "datatypes.h"
@@ -162,12 +163,15 @@ int create_sctp_sockets_client(options_t *options)
 
 	for(count = 0; count < options->num_parallel_sock; count++)   
 	{ 
-		if(( options->p_conn_sock_client[count] = 
+		if(( options->poll_p_conn_sock_client[count].fd = 
 				socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == -1) 
 		{ 
 			perror("creating p_listen_sock");   
 			exit(1); 
 		}
+		else { 
+			options->poll_p_conn_sock_client[count].events = POLLOUT; 
+		} 
 	} 
 
 	/* specifiy the maximum number of streams that will be available per socket */ 
@@ -178,7 +182,7 @@ int create_sctp_sockets_client(options_t *options)
 
 	for(count = 0; count < options->num_parallel_sock; count++)   
 	{
-		if(setsockopt (options->p_conn_sock_client[count], IPPROTO_SCTP,
+		if(setsockopt (options->poll_p_conn_sock_client[count].fd, IPPROTO_SCTP,
 			SCTP_INITMSG, &initmsg, sizeof(initmsg)) == -1 ) 
 		{
 			perror("client: setsockopt"); 
@@ -195,7 +199,7 @@ int create_sctp_sockets_client(options_t *options)
 	{ 
 		servaddr.sin_port = htons(PORT_START + count); 
 		/* connect to server */ 
-		if( connect( options->p_conn_sock_client[count], 
+		if( connect( options->poll_p_conn_sock_client[count].fd, 
 			(struct sockaddr *) &servaddr, sizeof(servaddr)) == -1) 
 		{ 
 			perror("client: connect"); 
@@ -215,7 +219,7 @@ int create_sctp_sockets_client(options_t *options)
 
 	for(count = 0; count < options->num_parallel_sock; count++)   
 	{ 
-		if(setsockopt( options->p_conn_sock[count], SOL_SCTP, SCTP_EVENTS, 
+		if(setsockopt( options->poll_p_conn_sock[count], SOL_SCTP, SCTP_EVENTS, 
 			(const void *)&events, sizeof(events)) == -1) 
 		{ 
 			perror("client: connect"); 
@@ -393,6 +397,7 @@ int recv_to_parallel_send(options_t *options)
 	int size; 
 	int count; 
 	char buffer[MAX_BUFFER]; 
+	int retry; 
 
 	while(1) { 
 
@@ -413,10 +418,24 @@ int recv_to_parallel_send(options_t *options)
 			}
 			else 
 			{
-				if( sctp_sendmsg(options->p_conn_sock_client[count], buffer, 
-					size, NULL, 0, 0, 0, 0, 0, 0) == -1)
+				if(poll(&options->poll_p_conn_sock_client[count], 1, -1) == -1) { 
+					perror("poll"); 
+					return EXIT_FAILURE;
+				}
+				if(options->poll_p_conn_sock_client[count].revents & POLLOUT)
 				{
-					perror("p_conn_sock_client: sctp_send");
+					do { 
+						retry = 0; 
+						if( (sctp_sendmsg(options->poll_p_conn_sock_client[count].fd, buffer, 
+							size, NULL, 0, 0, 0, 0, 0, 0)) == -1)
+						{
+							if(errno == 12) {
+								retry = 1; 
+								printf("errno = %d, %s\n", errno, strerror(errno)); 
+							}
+							else { perror("sctp_send");  }
+						}
+					}while(retry); 
 				}
 			}
 		}
@@ -439,11 +458,11 @@ void close_sockets_sctp_client(options_t *options)
 
 	close(options->tcp_server_sock); 
 	for( count = 0; count < options->num_parallel_sock; count++) { 
-		close(options->p_conn_sock_client[count]); 		
+		close(options->poll_p_conn_sock_client[count].fd); 		
 	} 
 }
 
 void free_sockets(options_t *options) { 
-	free(options->p_conn_sock_client); 
+	free(options->poll_p_conn_sock_client); 
 	free(options->p_conn_sock_server); 
 }
