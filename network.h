@@ -7,4 +7,6 @@ int parallel_recv_to_tcp_send(options_t *options);
 int recv_to_parallel_send(options_t *options); 
 void close_sockets_sctp_server(options_t *options); 
 void close_sockets_sctp_client(options_t *options); 
-
+void free_sockets(options_t *options); 
+int sctp_sockets_server_listen_accept(options_t *options);
+int tcp_socket_server_listen_accept(options_t * options); 

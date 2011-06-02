@@ -53,8 +53,6 @@ int allocate_network_server(options_t *options)
 int create_sctp_sockets_server(options_t *options) 
 { 
 	int count; 
-	socklen_t sin_size; 
-	struct sockaddr_storage their_addr; 
 	struct sockaddr_in servaddr; 
 	struct sctp_initmsg initmsg; 
 
@@ -118,6 +116,14 @@ int create_sctp_sockets_server(options_t *options)
 		} 
 	} 
 	*/ 
+	return EXIT_SUCCESS; 
+}
+
+int sctp_sockets_server_listen_accept(options_t *options)  { 
+
+	int count; 
+	socklen_t sin_size; 
+	struct sockaddr_storage their_addr; 
 
 	for( count = 0; count < options->num_parallel_sock; count++) 
 	{ 
@@ -128,7 +134,7 @@ int create_sctp_sockets_server(options_t *options)
 	{
 		printf("Waiting for connections\n"); 
 	} 
-	
+
 	sin_size = sizeof(their_addr); 
 	for(count = 0; count < options->num_parallel_sock; count++) 
 	{ 
@@ -277,10 +283,7 @@ int connect_tcp_socket_client(options_t *  options)
 int create_tcp_server(options_t * options) 
 { 
 
-	int tcp_listen_sock; 
-	struct sockaddr_storage their_addr; 
 	struct addrinfo hints, *servinfo, *p; 
-	socklen_t sin_size; 
 	int yes=1; 
 	int ret; 
 	
@@ -301,15 +304,15 @@ int create_tcp_server(options_t * options)
 
 	/* Loop though all the results and vind to first one we can */ 
 	for( p = servinfo; p != NULL; p = p->ai_next) { 
-		if (( tcp_listen_sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) { 
+		if (( options->tcp_listen_sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) { 
 			perror("client: socket_tcp"); 
 			continue; 
 		}
-		if( setsockopt(tcp_listen_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) { 
+		if( setsockopt(options->tcp_listen_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) { 
 			perror("client: setsockopt_tcp"); 
 			return EXIT_FAILURE; 
 		}
-		if(bind(tcp_listen_sock, p->ai_addr, p->ai_addrlen) == -1) { 
+		if(bind(options->tcp_listen_sock, p->ai_addr, p->ai_addrlen) == -1) { 
 			perror("client: bind_tcp"); 
 			continue; 
 		}
@@ -322,13 +325,21 @@ int create_tcp_server(options_t * options)
 	}
 
 	freeaddrinfo(servinfo); 
+	return EXIT_SUCCESS; 
+}
 
-	if(listen(tcp_listen_sock, BACKLOG) == -1) { 
+int tcp_socket_server_listen_accept(options_t * options) { 
+
+	socklen_t sin_size; 
+	struct sockaddr_storage their_addr; 
+
+	if(listen(options->tcp_listen_sock, BACKLOG) == -1) { 
 		perror("client: listen_tcp"); 
 		return EXIT_FAILURE; 
 	}
 	sin_size = sizeof(their_addr); 
-	if((options->tcp_server_sock = accept(tcp_listen_sock, (struct sockaddr *) &their_addr, &sin_size)) == -1) { 
+
+	if((options->tcp_server_sock = accept(options->tcp_listen_sock, (struct sockaddr *) &their_addr, &sin_size)) == -1) { 
 		perror("client: accept tcp"); 	
 		return EXIT_FAILURE; 
 	}	
@@ -415,12 +426,10 @@ int recv_to_parallel_send(options_t *options)
 void close_sockets_sctp_server(options_t *options) 
 { 
 	int count; 
-
 	close(options->tcp_client_sock); 
 	for( count = 0; count < options->num_parallel_sock; count++) { 
 		close(options->p_conn_sock_server[count]); 		
 	} 
-	free(options->p_conn_sock_server); 
 }
 
 
@@ -432,7 +441,9 @@ void close_sockets_sctp_client(options_t *options)
 	for( count = 0; count < options->num_parallel_sock; count++) { 
 		close(options->p_conn_sock_client[count]); 		
 	} 
-	free(options->p_conn_sock_client); 
 }
 
-
+void free_sockets(options_t *options) { 
+	free(options->p_conn_sock_client); 
+	free(options->p_conn_sock_server); 
+}

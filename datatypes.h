@@ -23,6 +23,7 @@ typedef struct options_struct {
 	int verbose;						/* Verbose Mode 	*/  
 	int num_parallel_sock;			/* Number of parallel sockets to use */  
 	int *p_listen_sock;				/* FD for listening sockets */  
+	int tcp_listen_sock;			/* FD for listening tcp (BIND)  */  
 	int *p_conn_sock_server;		/* FD for parallel connecting sockets (CONNECT) */  
 	int *p_conn_sock_client;		/* FD for servers connected sockets  (BIND) */  
 	int tcp_client_sock;				/* FD that connects to end's host single TCP */  
