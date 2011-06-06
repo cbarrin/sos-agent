@@ -17,7 +17,7 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 	int opt; 
 	memset(options, 0, sizeof(options_t)); 
 
-	while(( opt = getopt(argc, argv, "p:vc:")) != -1) { 
+	while(( opt = getopt(argc, argv, "p:vdc:")) != -1) { 
 		switch (opt) { 
 			case 'p': 
 				printf("Protocol = [%s]\n", optarg); 
@@ -38,6 +38,9 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 				printf("Number of connections = [%s]\n", optarg); 
 				options->num_parallel_sock = atoi(optarg); 
 				break; 
+			case 'd':
+				printf("will print tcpdata\n"); 
+				options->tcp_data = 1; 
 			case '?':
 				display_usage(); 
 				break;
