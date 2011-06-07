@@ -40,7 +40,8 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 				break; 
 			case 'd':
 				printf("will print tcpdata\n"); 
-				options->tcp_data = 1; 
+				options->data_verbose = 1; 
+				break; 
 			case '?':
 				display_usage(); 
 				break;

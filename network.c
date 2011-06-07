@@ -386,7 +386,7 @@ int parallel_recv_to_tcp_send(options_t *options)
 				if(send(options->tcp_client_sock, buffer, size, 0) == -1) { 
 					perror("tcp send");
 				}
-				if(options->tcp_data) { 
+				if(options->data_verbose) { 
 					printf("sent [%s]", buffer); 	
 				} 
 			}
@@ -410,7 +410,7 @@ int recv_to_parallel_send(options_t *options)
 				close_sockets_sctp_client(options); 
 				return EXIT_FAILURE; 
 			}
-			if(options->tcp_data) { 
+			if(options->data_verbose) { 
 				printf("recv [%s]", buffer); 	
 			} 
 			if(size == 0) 
