@@ -462,7 +462,7 @@ int epoll_data_transfer(options_t *options)
 			if( events[i].data.ptr == (void *)TCP_SOCK_DATA) { 
 				ret = read_tcp_send_parallel(options); 		
 				if(ret == CLOSE_CONNECTION) { 
-					timeout = 1000; // 1 second 
+					timeout = 1000 // 1 second 
 				}
 	
 			} 
@@ -471,6 +471,10 @@ int epoll_data_transfer(options_t *options)
 				if(ret == CLOSE_CONNECTION) { 
 					timeout = 1000;  // 1 second
 				} 
+			} 
+			else if(!nr_events) { 
+				remove_client(options); 		 	
+				exit(1) ; 
 			} 
 			else { 
 				printf("Error [%p] events [%d] read[%d]write[%d]\n",  events[i].data.ptr, nr_events,  
