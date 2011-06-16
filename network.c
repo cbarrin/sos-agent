@@ -25,6 +25,7 @@
 #include "tcp_thread.h"
 #include "arguments.h"
 #include "network.h"
+#include "discovery.h"
 
 
 
@@ -414,25 +415,32 @@ int epoll_connections(options_t *options)
 { 
 	int nr_events; 
 	struct epoll_event events;
-	
-	nr_events = epoll_wait(options->epfd_accept, &events,  1 , -1); 
-	if(nr_events < 0) { 
-		perror("epoll_wait"); 
-		exit(1); 
-	}
-	// accept tcp 
-	if( events.data.ptr == (void *)TCP_SOCK_LISTEN) {
-		return TCP_SOCK_LISTEN; 
-	} 
-	// accept new parallel 
-	else if( events.data.ptr == (void *)PARALLEL_SOCK_LISTEN) 
-	{ 
-		return PARALLEL_SOCK_LISTEN; 
-	}
-	// shouldn't happen blocking epoll_wait 
-	return EXIT_FAILURE; 
-}	
+	int	timeout = 10000; // 10 seconds 	
 
+	while(1) { 
+		nr_events = epoll_wait(options->epfd_accept, &events,  1 , timeout); 
+		if(nr_events < 0) { 
+			perror("epoll_wait"); 
+			exit(1); 
+		}
+		// no connections came in timeout se we send discovery! 
+		if(nr_events == 0) { 
+			send_discovery_message(&options->discovery); 
+		} 
+	
+		// accept tcp 
+		else if( events.data.ptr == (void *)TCP_SOCK_LISTEN) {
+			return TCP_SOCK_LISTEN; 
+		} 
+		// accept new parallel 
+		else if( events.data.ptr == (void *)PARALLEL_SOCK_LISTEN) 
+		{ 
+			return PARALLEL_SOCK_LISTEN; 
+		}
+	}
+	return EXIT_FAILURE; 
+}		
+	
 /*
 * This function is responsible for tranfering data
 * between all of the sockets. Once a side closes we 
@@ -613,6 +621,7 @@ void increment_index(options_t *options, int type)
 int init_sockets(options_t *options) 
 {
 	// man pages that size doesnt matter here... 
+	options->num_clients = 0; 
 	options->epfd_accept = epoll_create(100); 
 
 	if(options->epfd_accept < 0 ) { 

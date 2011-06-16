@@ -11,6 +11,7 @@
 #include "tcp_thread.h"
 #include "arguments.h"
 #include "network.h"
+#include "discovery.h"
 
 
 int get_arguments(options_t *options,  int argc, char **argv) { 
@@ -49,6 +50,7 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 		}
 	} 
 	if(check_valid_options(options) == EXIT_SUCCESS) { 
+		init_discovery(&options->discovery); 
 		return init_sockets(options); 
 	} 	
 	else { 
@@ -69,25 +71,8 @@ int check_valid_options(options_t *options) {
 
 }
 
-/*
-void  allocate_options(options_t *options) { 
-
-	options->p_listen_sock = malloc(sizeof(int) * options->num_parallel_sock); 	
-	options->p_conn_sock_server = malloc(sizeof(int) * options->num_parallel_sock); 
-	//options->p_conn_sock_client = malloc(sizeof(int) * options->num_parallel_sock); 
-	options->poll_p_conn_sock_client = malloc(sizeof(struct pollfd) * options->num_parallel_sock); 
-	if( 
-		options->p_listen_sock == NULL || 
-		options->p_conn_sock_server == NULL || 
-		options->poll_p_conn_sock_client == NULL) 
-	{ 
-		printf("malloc failed!\n"); 		
-		exit(1); 
-	} 
-
-}
-*/ 
 
 void display_usage() { 
 	printf("Usage: \n"); 
+	/*FIXME */ 
 } 
