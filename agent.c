@@ -42,19 +42,10 @@ int main( int argc, char **argv) {
 			i = fork(); 
 			if(i == 0) { 
 				if(ret == TCP_SOCK_LISTEN) { 
-					if(!tcp_socket_server_accept(&options)) { 
-						if(!create_sctp_sockets_client(&options)) { 
-							printf("TCP Socket created and accepted client on...SCTP connects finished!\n"); 	
-						}
-					}
+					handle_tcp_accept(&options); 
 				} 	
 				else if(ret == PARALLEL_SOCK_LISTEN) { 
-					if(!parallel_server_accept(&options)) { 
-						if(!create_tcp_socket_client(&options)) { 
-							printf("Other end accepted our TCP connection\n"); 	
-						}
-					}
-	
+					handle_parallel_accept(&options); 
 				} 
 				configure_epoll(&options); 
 				epoll_data_transfer(&options); 

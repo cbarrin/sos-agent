@@ -28,18 +28,38 @@
 #include "network.h"
 
 
-/*
-	The process that class allowcate_network_server 
-	ends up binding on p_conn_sock_server. Then, 
-	it makes an outgoing tcp connection to 
-	TCP_DESTINATION_ADDRESS. 
 
-	Then it should call parallel_recv_to_tcp_send()
-	which reads from the binded parallel socket 
-	and puts in the connected tcp socket 
+int handle_tcp_accept(options_t *options) 
+{
+	if(!tcp_socket_server_accept(options)) 
+	{ 
+		if(!create_sctp_sockets_client(options)) 
+		{ 
+			if(options->verbose) 
+			{ 
+				printf("TCP Socket created and accepted client on...SCTP connects finished!\n"); 	
+			}
+		}
+	}
+	return EXIT_SUCCESS; 
+}
+
+int handle_parallel_accept(options_t *options) 
+{ 
+	if(!parallel_server_accept(options)) 
+	{ 
+		if(!create_tcp_socket_client(options)) 
+		{ 
+			if(options->verbose) 
+			{ 
+				printf("Other end accepted our TCP connection\n"); 	
+			}
+		}
+	}
+	return EXIT_SUCCESS; 
+}
 
 
-*/ 
 
 int create_parallel_server_listen(options_t *options) 
 { 
@@ -60,11 +80,6 @@ int create_sctp_sockets_server(options_t *options)
 	struct sockaddr_in servaddr; 
 	struct sctp_initmsg initmsg; 
 
-//	hints_t * data_hints= malloc(sizeof(hints_t)); 
-//	if(data_hints== NULL) { 
-//		printf("Hints failed to malloc"); 
-//	} 
-
 
 	for(count = 0; count < options->num_parallel_sock; count++) { 
 		if(( options->parallel_listen_socks[count] = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == -1) { 
@@ -74,7 +89,6 @@ int create_sctp_sockets_server(options_t *options)
 	}		
 	// we only poll on socket 0 because if we get a hit here the other fd should
 	// fire as well. Perhaps this isn't idle FIXME
-//	options->parallel_socks[0].events =  POLLIN; 
 	/* Accept connection from any interface */ 	
 
 	bzero( (void *)&servaddr, sizeof(servaddr) ); 
@@ -113,7 +127,6 @@ int create_sctp_sockets_server(options_t *options)
 		listen( options->parallel_listen_socks[count], BACKLOG); 
 	} 
 
-//	data_hints->type = PARALLEL_SOCK_LISTEN; 
 
 	options->parallel_ev.events = EPOLLIN; 	
 	options->parallel_ev.data.ptr = (void *)PARALLEL_SOCK_LISTEN;
@@ -134,12 +147,6 @@ int parallel_server_accept(options_t *options)
 	int count; 
 	socklen_t sin_size; 
 	struct sockaddr_storage their_addr; 
-//	hints_t *data_hints; 
-//	data_hints = malloc(sizeof(hints_t)); 
-
-//	if(data_hints == NULL) { 
-//		printf("Failed to malloc hints!\n"); 
-//	} 
 	
 	
 	if(options->verbose) 
@@ -162,18 +169,6 @@ int parallel_server_accept(options_t *options)
 
 	}
 
-//	data_hints->type = PARALLEL_SOCK_DATA; 
-//	options->parallel_ev.events = EPOLLIN  ; 
-//	options->parallel_ev.data.ptr = data_hints; 
-
-//	if(epoll_ctl(options->epfd_data, 
-//			EPOLL_CTL_ADD, 
-//			options->parallel_sock[0], 
-//		 	&options->parallel_ev)) 
-//	{
-//		perror("epoll_ctl parallel_server_accept"); 
-//		exit(1); 
-//	} 
 
 	if(options->verbose) 
 	{
@@ -234,23 +229,6 @@ int create_sctp_sockets_client(options_t *options)
 			return EXIT_FAILURE; 
 		}
 	} 
-/*
-	hints_t  *data_hints= malloc(sizeof(hints_t)); 
-	if(data_hints== NULL) { 
-		printf("data_hintsfailed to malloc"); 
-	}
-	options->parallel_ev.events = EPOLLIN; 
-	options->parallel_ev.data.ptr = data_hints; 
-	data_hints->type = PARALLEL_SOCK_DATA; 
-
-	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD,
-			options->parallel_sock[0], 
-			&options->parallel_ev)) 
-	{ 
-		perror("epoll_ctl  create_sctp_sockets_client"); 
-		exit(1); 
-	}
-*/
 	return EXIT_SUCCESS; 
 }
 
@@ -263,14 +241,6 @@ int create_tcp_socket_client(options_t *  options)
 	hints.ai_family = AF_UNSPEC; 
 	hints.ai_socktype = SOCK_STREAM;
 
-//	hints_t *data_hints; 
-//	data_hints = malloc(sizeof(hints_t)); 
-//	if(data_hints == NULL) { 
-//		printf("hints_t failed to malloc"); 	
-//		return EXIT_FAILURE; 
-//	} 
-	
-//	data_hints->type = TCP_SOCK_DATA; 
 
 	/* Make TCP CONNECTION */ 
 	if (( ret = getaddrinfo(TCP_DESTINATION_ADDRESS, TCP_PORT, &hints, &servinfo)) != 0) { 
@@ -297,15 +267,6 @@ int create_tcp_socket_client(options_t *  options)
 		return EXIT_FAILURE; 
 	}
 	
-////	options->tcp_ev.events = EPOLLIN; 	
-//	options->tcp_ev.data.ptr = data_hints; 
-//
-//	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
-//			options->tcp_sock, 
-//			&options->tcp_ev)) { 		
-//		 	perror("epoll ctl create_tcp_socket_client add"); 
-//			exit(1); 
-//	} 
 	return EXIT_SUCCESS; 
 }
 
@@ -316,11 +277,6 @@ int create_tcp_server_listen(options_t * options)
 	struct addrinfo hints, *servinfo, *p; 
 	int yes=1; 
 	int ret; 
-//	hints_t  * data_hints= malloc(sizeof(hints_t)); 
-//	if(data_hints== NULL) { 
-//		printf("Hints failed to malloc"); 
-//	} 
-	
 
 	memset(&hints, 0, sizeof(hints)); 
 	hints.ai_family = AF_UNSPEC; 
@@ -374,12 +330,6 @@ int create_tcp_server_listen(options_t * options)
 		perror("epoll_ctl create_tcp_server_listen"); 
 		exit(1); 
 	}
-/*
-	FD_SET(options->tcp_listen_sock.fd, &options->read_socks);  
-	if(options->highsock < options->tcp_listen_sock.fd) { 
-		 options->highsock = options->tcp_listen_sock.fd; 
-	}
-*/ 
 	freeaddrinfo(servinfo); 
 	return EXIT_SUCCESS; 
 }
@@ -397,28 +347,16 @@ int tcp_socket_server_accept(options_t * options)
 		perror("accept_tcp"); 	
 		return EXIT_FAILURE; 
 	}	
-/*
-	hints_t * data_hints= malloc(sizeof(hints_t)); 
-	data_hints->type =  TCP_SOCK_DATA; 
-	options->tcp_ev.data.ptr = data_hints; 
-	options->tcp_ev.events = EPOLLIN; 
-
-
-	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
-			options->tcp_sock, 
-			&options->tcp_ev)) { 
-		perror("epoll_ctl tcp_socket_server_accept");  
-		exit(1); 
-	} 
-*/ 
 
 	return EXIT_SUCCESS; 
 }
 
-int close_data(options_t * options) { 
+int close_data(options_t * options) 
+{ 
 	int count; 
 	close(options->tcp_sock); 
-	for(count = 0; count < options->num_parallel_sock; count++) { 
+	for(count = 0; count < options->num_parallel_sock; count++) 
+	{ 
 		close(options->parallel_sock[count]); 
 	} 
 	return EXIT_SUCCESS; 
@@ -426,40 +364,29 @@ int close_data(options_t * options) {
 
 int configure_epoll(options_t *options) 
 { 
+	int count; 
 	options->epfd_data = epoll_create(options->num_parallel_sock + 1); 
-	if(options->epfd_data < 0) { 
+	if(options->epfd_data < 0) 
+	{ 
 		perror("epoll_data"); 	
 		exit(1); 
 	}
 	options->last_read_fd = 0; 
 	options->last_write_fd = 0 ;
 
-	int count; 
-//	hints_t * data_hints= malloc(sizeof(hints_t)); 
-
-//	if(data_hints== NULL)  { 
-//		printf("Hints falled to malloc"); 
-//	}
-
-//	data_hints->type =  TCP_SOCK_DATA; 
 	options->tcp_ev.data.ptr = (void *)TCP_SOCK_DATA; 
 	options->tcp_ev.events = EPOLLIN; 
 
 	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
 			options->tcp_sock, 
-			&options->tcp_ev)) { 
+			&options->tcp_ev)) 
+	{ 
 		perror("epoll_ctl tcp_socket_server_accept");  
 		exit(1); 
 	} 
 
-//	data_hints= malloc(sizeof(hints_t)); 
-//
-//	if(data_hints== NULL) { 
-//		printf("data_hintsfailed to malloc"); 
-//	}
 	options->parallel_ev.events = EPOLLIN; 
 	options->parallel_ev.data.ptr = (void *) PARALLEL_SOCK_DATA; 
-//	data_hints->type = PARALLEL_SOCK_DATA; 
 
 	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD,
 			options->parallel_sock[0], 
@@ -469,81 +396,19 @@ int configure_epoll(options_t *options)
 		exit(1); 
 	}
 
-	// close listen sockets
-	for(count = 0; count < options->num_parallel_sock; count++) { 
-		//close(options->parallel_listen_socks[count]); 
+	// close listen sockets (child doesn't need to know about these) 
+	for(count = 0; count < options->num_parallel_sock; count++) 
+	{ 
+		close(options->parallel_listen_socks[count]); 
 	} 
-	//free(options->parallel_listen_socks); 	
-	//close(options->tcp_listen_sock); 
+	free(options->parallel_listen_socks); 	
+	close(options->tcp_listen_sock); 
 
 	return EXIT_SUCCESS; 		
 
 } 
 
 
-int clean_up_tcp_fork(options_t * options) 
-{
-
-	int count; 
-	if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
-			options->tcp_sock, 
-			&options->tcp_ev)) { 
-		perror("epoll_ctl tcp_socket_server_accept");  
-		exit(1); 
-	} 
-//	free(options->tcp_ev.data.ptr); 
-
-	if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL,
-			options->parallel_sock[0], 
-			&options->parallel_ev)) 
-	{ 
-		perror("epoll_ctl  create_sctp_sockets_client"); 
-		exit(1); 
-	}
-	
-//	free(options->parallel_ev.data.ptr); 
-
-	for(count = 0; count < options->num_parallel_sock; count++)   
-	{ 
-		close(options->parallel_sock[count]);  
-	} 
-	return EXIT_SUCCESS; 
-}
-
-
-
-int clean_up_parallel_fork(options_t *options) 
-{ 
-
-	int count; 
-
-	if(epoll_ctl(options->epfd_data, 
-			EPOLL_CTL_DEL, 
-			options->parallel_sock[0], 
-		 	&options->parallel_ev)) 
-	{
-		perror("epoll_ctl parallel_server_accept"); 
-		exit(1); 
-	} 
-	
-//	free(options->parallel_ev.data.ptr); 
-
-	for(count = 0; count < options->num_parallel_sock; count++)   
-	{ 
-		close(options->parallel_sock[count]);  
-	}
-	
-	if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
-			options->tcp_sock, 
-			&options->tcp_ev)) { 		
-		 	perror("epoll ctl create_tcp_socket_client del"); 
-			exit(1); 
-	} 
-//	free(options->tcp_ev.data.ptr); 
-	close(options->tcp_sock); 
-	return EXIT_SUCCESS; 
-
-}
 
 
 int epoll_connections(options_t *options) 
@@ -556,36 +421,17 @@ int epoll_connections(options_t *options)
 		perror("epoll_wait"); 
 		exit(1); 
 	}
-//	printf(" %d\n", ((hints_t *)events.data.ptr)->type); 
-	// accept new tcp 
+	// accept tcp 
 	if( events.data.ptr == (void *)TCP_SOCK_LISTEN) {
 		return TCP_SOCK_LISTEN; 
 	} 
-	/*
-		if(!tcp_socket_server_accept(options)) { 
-			if(!create_sctp_sockets_client(options)) { 
-				printf("TCP Socket created and accepted client on...SCTP connects finished!\n"); 	
-			}
-		}
-		printf("out 1\n"); 
-		return 1; 
-	}	
-	*/ 
-	// accept new sctp 
-	else if( events.data.ptr == (void *)PARALLEL_SOCK_LISTEN) { 
+	// accept new parallel 
+	else if( events.data.ptr == (void *)PARALLEL_SOCK_LISTEN) 
+	{ 
 		return PARALLEL_SOCK_LISTEN; 
 	}
-/*
-		if(!parallel_server_accept(options)) { 
-			if(!create_tcp_socket_client(options)) { 
-				printf("Other end accepted our TCP connection\n"); 	
-			}
-		}
-		printf("out 2\n"); 
-		return 2; 
-	} 
-	*/ 
-	return 0; 
+	// shouldn't happen blocking epoll_wait 
+	return EXIT_FAILURE; 
 }	
 
 int epoll_data_transfer(options_t *options) 
@@ -593,7 +439,6 @@ int epoll_data_transfer(options_t *options)
 	int nr_events, i; 
 	int ret; 
 	
-	//  2 one for tcp sock one ofr parallel sock 	
 
 	struct epoll_event events[2];
 
@@ -631,58 +476,6 @@ int epoll_data_transfer(options_t *options)
 
 }
 
-/*
-int do_epoll(options_t *options) { 
-	
-	int nr_events, i; 
-	int ret; 
-	
-	nr_events = epoll_wait(options->epfd, options->events, options->client_list.num_clients+2 , -1); 
-	if(nr_events < 0) { 
-		perror("epoll_wait"); 
-		exit(1); 
-	}
-	
-	for(i = 0; i < nr_events; i++) { 
-		// accept new tcp 
-		if( ((hints_t *)options->events[i].data.ptr)->type == TCP_SOCK_LISTEN) {
-			if(!tcp_socket_server_accept(options)) { 
-				if(!create_sctp_sockets_client(options)) { 
-					printf("TCP Socket created and accepted client on...SCTP connects finished!\n"); 	
-				}
-			}
-		}	
-		// accept new sctp 
-		else if( ((hints_t *)options->events[i].data.ptr)->type == PARALLEL_SOCK_LISTEN) { 
-			if(!parallel_server_accept(options)) { 
-				if(!create_tcp_socket_client(options)) { 
-					printf("Other end accepted our TCP connection\n"); 	
-				}
-			}
-		} 
-		// relay data 
-		
-		else if( ((hints_t *)options->events[i].data.ptr)->type == TCP_SOCK_DATA) { 
-			ret = read_tcp_send_parallel( ((hints_t *)options->events[i].data.ptr)->me, options); 		
-			if(ret == CLOSE_CONNECTION) { 
-				remove_client(options, ((hints_t *)options->events[i].data.ptr)->me); 		 	
-			}
-
-		} 
-		else if( ((hints_t *)options->events[i].data.ptr)->type == PARALLEL_SOCK_DATA) { 
-
-			ret = read_parallel_send_tcp( ((hints_t *)options->events[i].data.ptr)->me, options); 
-			if(ret == CLOSE_CONNECTION) { 
-				remove_client(options, ((hints_t *)options->events[i].data.ptr)->me); 		 	
-			} 
-		} 
-		else { 
-			printf("AHHH???? invalid ptr??\n") ; 
-		}
-	} 
-	return EXIT_SUCCESS; 
-} 
-*/ 
 
 void remove_client(options_t *options) { 
 	int count; 
@@ -692,9 +485,11 @@ void remove_client(options_t *options) {
 	for(count = 0; count < options->num_parallel_sock; count++) {
 		close(options->parallel_sock[count]); 
 	} 
-//	free(options->parallel_ev.data.ptr); 
 	free(options->parallel_sock); 	
-	printf("CONNECTION CLOSED!\n"); 
+	if(options->verbose) 
+	{ 
+		printf("CONNECTION CLOSED!\n"); 
+	}
 }
 
 int read_parallel_send_tcp(options_t *options) 
@@ -712,7 +507,6 @@ int read_parallel_send_tcp(options_t *options)
 		perror("sctp_recvmsg"); 
 		return EXIT_FAILURE; 
 	} 
-	// other side closed
 	if(!size) { 
 		return CLOSE_CONNECTION; 	
 	} 
@@ -806,59 +600,9 @@ void increment_index(options_t *options, int type)
 }
 
 
-/*
-int allocate_client(options_t *options) 
-{ 
-	client_t *new_client = malloc(sizeof(client_t)); 
-
-	if(new_client == NULL) { 
-		printf("Failed to malloc client_t\n"); 	
-		return EXIT_FAILURE; 
-	} 
-
-	new_client->next = NULL; 
-	new_client->last_read_fd = 0; 
-	new_client->last_write_fd = 0; 
-	new_client->num_fds = options->num_parallel_sock; 
-
-	// there are no connected clients 
-	if(!options->client_list.num_clients) { 	
-		options->client_list.head = new_client; 
-		options->client_list.tail = new_client; 
-		new_client->prev = NULL; 
-	}
-	else { 
-		new_client->prev = options->client_list.tail; 
-		options->client_list.tail->next = new_client; 
-		options->client_list.tail = new_client; 
-	} 
-
-	options->client_list.num_clients++; 
-
-//	free(options->events); 
-////	options->events = realloc(options->events, sizeof(struct epoll_event) * options->client_list.num_clients+2); 
-//	if(options->events == NULL) { 
-//		printf("Failed to allocate options->events\n"); 	
-//		return EXIT_FAILURE; 
-//	} 
-
-	new_client->parallel_sock = malloc(sizeof(int) 
-				* options->num_parallel_sock); 
-	new_client->parallel_ev = malloc(sizeof(struct epoll_event) * 
-				options->num_parallel_sock); 
-	
-	if(new_client->parallel_sock == NULL || new_client->parallel_ev == NULL) { 
-		printf("Faild to malloc sctp_sock\n"); 
-		return EXIT_FAILURE; 
-	} 
-	return EXIT_SUCCESS; 
-}
-*/  
 
 int init_sockets(options_t *options) 
 {
-
-
 	// man pages that size doesnt matter here... 
 	options->epfd_accept = epoll_create(100); 
 
@@ -872,9 +616,6 @@ int init_sockets(options_t *options)
 	options->parallel_sock = malloc(sizeof(int) * 
 			options->num_parallel_sock); 
 	
-	options->last_read_fd = 0; 
-	options->last_write_fd = 0 ;
-
 	if( 
 		options->parallel_listen_socks == NULL ||
 		options->parallel_sock == NULL 
