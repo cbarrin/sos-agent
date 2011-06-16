@@ -4,12 +4,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <poll.h>
+#include <sys/epoll.h>
 
 #include "common.h"
 #include "datatypes.h"
 #include "list.h"
 #include "tcp_thread.h"
 #include "arguments.h"
+#include "network.h"
 
 
 int get_arguments(options_t *options,  int argc, char **argv) { 
@@ -48,7 +50,7 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 		}
 	} 
 	if(check_valid_options(options) == EXIT_SUCCESS) { 
-		allocate_options(options); 
+		return init_sockets(options); 
 	} 	
 	else { 
 		exit(1);  
@@ -68,6 +70,7 @@ int check_valid_options(options_t *options) {
 
 }
 
+/*
 void  allocate_options(options_t *options) { 
 
 	options->p_listen_sock = malloc(sizeof(int) * options->num_parallel_sock); 	
@@ -84,7 +87,7 @@ void  allocate_options(options_t *options) {
 	} 
 
 }
-
+*/ 
 
 void display_usage() { 
 	printf("Usage: \n"); 

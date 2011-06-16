@@ -13,6 +13,9 @@
 #include <signal.h>
 #include <ctype.h> 
 #include <pthread.h>
+#include <poll.h>
+#include <sys/epoll.h>
+#include <omp.h>
 
 #include "common.h"
 #include "datatypes.h"
@@ -27,59 +30,36 @@ int main( int argc, char **argv) {
 	
 	options_t options; 	
 	get_arguments(&options, argc, argv); 
-	int i ; 
+	
+	// start tcp_server 	
+	create_tcp_server_listen(&options); 
+	create_parallel_server_listen(&options); 
+	int i, ret; 
 
-	i = fork(); 
-
-	// Create sctp binded sockets and binded tcp connection 	
-	if(i == 0) { 
-		if(allocate_network_server(&options) != EXIT_SUCCESS) 
-		{
-			return EXIT_FAILURE; 
-		} 
-	} 	
-	else { 
-		if(create_tcp_server(&options) != EXIT_SUCCESS) { 	
-			return EXIT_FAILURE; 
-		} 	
-	}	
-
-	while(1) 
-	{ 
-		if(i == 0) 
-		{ 	
-			if(sctp_sockets_server_listen_accept(&options) != EXIT_SUCCESS) { 
-				return EXIT_FAILURE; 
-			} 		
-			if(!fork()) 
-			{ 
-				if(connect_tcp_socket_client(&options) != EXIT_SUCCESS) 
-				{ 	
-					return EXIT_FAILURE; 
+	// do our polling stuff 
+	while(1) { 
+		if((ret = epoll_connections(&options)) )  { 
+			i = fork(); 
+			if(i == 0) { 
+				if(ret == TCP_SOCK_LISTEN) { 
+					if(!tcp_socket_server_accept(&options)) { 
+						if(!create_sctp_sockets_client(&options)) { 
+							printf("TCP Socket created and accepted client on...SCTP connects finished!\n"); 	
+						}
+					}
+				} 	
+				else if(ret == PARALLEL_SOCK_LISTEN) { 
+					if(!parallel_server_accept(&options)) { 
+						if(!create_tcp_socket_client(&options)) { 
+							printf("Other end accepted our TCP connection\n"); 	
+						}
+					}
+	
 				} 
-				parallel_recv_to_tcp_send(&options); 
-				free_sockets(&options); 	
-				return EXIT_SUCCESS; 
-			}
-		}
-		else 
-		{ 
-			if(tcp_socket_server_listen_accept(&options) != EXIT_SUCCESS) 
-			{
-				return EXIT_SUCCESS; 
-			} 
-			if(!fork()) { 
-				if(create_sctp_sockets_client(&options) != EXIT_SUCCESS) 
-				{ 
-					return EXIT_FAILURE; 
-				} 
-		
-				recv_to_parallel_send(&options); 
-				free_sockets(&options); 	
-				return EXIT_SUCCESS; 
+				configure_epoll(&options); 
+				epoll_data_transfer(&options); 
 			} 
 		}
-	}
-	free_sockets(&options); 
+	} 
 	return EXIT_SUCCESS; 
 }
