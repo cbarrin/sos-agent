@@ -22,7 +22,6 @@
 
 #include "common.h"
 #include "datatypes.h"
-#include "list.h"
 #include "tcp_thread.h"
 #include "arguments.h"
 #include "network.h"
