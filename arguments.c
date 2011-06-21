@@ -5,6 +5,11 @@
 #include <string.h>
 #include <poll.h>
 #include <sys/epoll.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 
 #include "common.h"
 #include "datatypes.h"
@@ -12,6 +17,7 @@
 #include "arguments.h"
 #include "network.h"
 #include "discovery.h"
+#include "controller.h"
 
 
 int get_arguments(options_t *options,  int argc, char **argv) { 
@@ -51,6 +57,7 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 	} 
 	if(check_valid_options(options) == EXIT_SUCCESS) { 
 		init_discovery(&options->discovery); 
+		init_controller_listener(&options->controller); 
 		return init_sockets(options); 
 	} 	
 	else { 

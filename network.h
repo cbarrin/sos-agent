@@ -20,3 +20,5 @@ int configure_epoll(options_t *options) ;
 int close_data(options_t *options); 
 int handle_parallel_accept(options_t *options) ; 
 int handle_tcp_accept(options_t *options) ; 
+void *get_in_addr(struct sockaddr *sa); 
+

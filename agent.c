@@ -22,6 +22,7 @@
 #include "tcp_thread.h"
 #include "arguments.h"
 #include "network.h"
+#include "controller.h"
 
 
 int main( int argc, char **argv) { 
@@ -38,6 +39,7 @@ int main( int argc, char **argv) {
 	// do our polling stuff 
 	while(1) { 
 		if((ret = epoll_connections(&options)) )  { 
+			get_controller_message(&options.controller); 
 			i = fork(); 
 			if(i == 0) { 
 				if(ret == TCP_SOCK_LISTEN) { 

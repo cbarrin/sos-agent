@@ -3,11 +3,20 @@ typedef struct discovery_struct {
 	struct addrinfo *dest; 
 }discovery_t ; 
 
+typedef struct controller_struct { 
+	int sock ; 
+	short int port; 
+	char send_ip[INET6_ADDRSTRLEN]; 
+	struct addrinfo *dest; 
+	
+}controller_t ; 
+
 
 
 
 typedef struct options_struct { 
 	struct discovery_struct discovery; 
+	struct controller_struct controller; 
 	struct epoll_event tcp_listen_ev; 
 	struct epoll_event events_accept[2]; 
 		

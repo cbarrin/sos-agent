@@ -31,6 +31,7 @@
 
 int handle_tcp_accept(options_t *options) 
 {
+	close(options->controller.sock); 
 	if(!tcp_socket_server_accept(options)) 
 	{ 
 		if(!create_sctp_sockets_client(options)) 
@@ -46,6 +47,7 @@ int handle_tcp_accept(options_t *options)
 
 int handle_parallel_accept(options_t *options) 
 { 
+	close(options->controller.sock); 
 	if(!parallel_server_accept(options)) 
 	{ 
 		if(!create_tcp_socket_client(options)) 
@@ -81,8 +83,10 @@ int create_sctp_sockets_server(options_t *options)
 	struct sctp_initmsg initmsg; 
 
 
-	for(count = 0; count < options->num_parallel_sock; count++) { 
-		if(( options->parallel_listen_socks[count] = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == -1) { 
+	for(count = 0; count < options->num_parallel_sock; count++) 
+	{ 
+		if(( options->parallel_listen_socks[count] = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == -1) 
+		{ 
 			perror("creating p_listen_sock");   
 			exit(1); 
 		}
@@ -132,10 +136,11 @@ int create_sctp_sockets_server(options_t *options)
 	options->parallel_ev.data.ptr = (void *)PARALLEL_SOCK_LISTEN;
 
 	if(epoll_ctl(options->epfd_accept, EPOLL_CTL_ADD, options->parallel_listen_socks[0], 
-			&options->parallel_ev))   { 
+			&options->parallel_ev))   
+	{ 
 			perror("epoll_ctl sctp"); 
 			exit(1); 
-		} 
+	} 
 
 	return EXIT_SUCCESS; 
 }
@@ -216,7 +221,13 @@ int create_sctp_sockets_client(options_t *options)
 	/*info about who is at the other end */ 
 	bzero( (void *)&servaddr, sizeof(servaddr) ); 
 	servaddr.sin_family = AF_INET; 
-	servaddr.sin_addr.s_addr = inet_addr(SCTP_CONNECT_TO_ADDR); 
+	//servaddr.sin_addr.s_addr = inet_addr(SCTP_CONNECT_TO_ADDR); 
+	servaddr.sin_addr.s_addr = inet_addr(options->controller.send_ip); 
+	
+	if(options->verbose)
+	{
+		printf("connectioning parallel to [%s]\n", options->controller.send_ip); 
+	}
 
 	for(count = 0; count < options->num_parallel_sock; count++)   
 	{ 
@@ -240,21 +251,30 @@ int create_tcp_socket_client(options_t *  options)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC; 
 	hints.ai_socktype = SOCK_STREAM;
+	char port[5]; 
+	memset(port, 0, sizeof(port)); 
+	sprintf(port, "%hi", options->controller.port);
+	printf("AHAHAH %s\n", port); 
 
 
 	/* Make TCP CONNECTION */ 
-	if (( ret = getaddrinfo(TCP_DESTINATION_ADDRESS, TCP_PORT, &hints, &servinfo)) != 0) { 
+	//servaddr.sin_addr.s_addr = inet_addr(options->controller.send_ip); 
+	if (( ret = getaddrinfo(options->controller.send_ip, port, &hints, &servinfo)) != 0) 
+	{ 
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(ret)); 
 		return EXIT_FAILURE; 
 	} 
 
 	// loop though all results and connect to first one we can 
-	for( p = servinfo; p != NULL; p = p->ai_next) { 
-		if ((options->tcp_sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) { 
+	for( p = servinfo; p != NULL; p = p->ai_next) 
+	{ 
+		if ((options->tcp_sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) 
+		{ 
 			perror("socket_tcp"); 
 			continue; 
 		}
-		if (connect(options->tcp_sock, p->ai_addr, p->ai_addrlen) == -1) { 
+		if (connect(options->tcp_sock, p->ai_addr, p->ai_addrlen) == -1) 
+		{ 
 			close(options->tcp_sock); 
 			perror("connect_tcp"); 
 			continue; 
@@ -262,7 +282,8 @@ int create_tcp_socket_client(options_t *  options)
 		break; 
 	}
 
-	if(p == NULL) { 
+	if(p == NULL) 
+	{ 
 		fprintf(stderr, "server: failed to connect\n"); 
 		return EXIT_FAILURE; 
 	}
@@ -287,39 +308,45 @@ int create_tcp_server_listen(options_t * options)
 	* Create a tcp socket and bind, listen accept. 
 	*/ 
 
-	if (( ret = getaddrinfo(NULL, TCP_PORT, &hints, &servinfo)) != 0) {
+	if (( ret = getaddrinfo(NULL, TCP_PORT, &hints, &servinfo)) != 0) 
+	{
 		printf("getaddrinfo: %s\n", gai_strerror(ret)); 
 		return EXIT_FAILURE; 
 	}
 
 	/* Loop though all the results and vind to first one we can */ 
-	for( p = servinfo; p != NULL; p = p->ai_next) { 
-		if (( options->tcp_listen_sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) { 
+	for( p = servinfo; p != NULL; p = p->ai_next) 
+	{ 
+		if (( options->tcp_listen_sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) 
+		{ 
 			perror("client: socket_tcp"); 
 			continue; 
 		}
-		if( setsockopt(options->tcp_listen_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) { 
+		if( setsockopt(options->tcp_listen_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) 
+		{ 
 			perror("client: setsockopt_tcp"); 
 			return EXIT_FAILURE; 
 		}
-		if(bind(options->tcp_listen_sock, p->ai_addr, p->ai_addrlen) == -1) { 
+		if(bind(options->tcp_listen_sock, p->ai_addr, p->ai_addrlen) == -1) 
+		{ 
 			perror("client: bind_tcp"); 
 			continue; 
 		}
 		break; 
 	}
 
-	if( p == NULL) { 
+	if( p == NULL) 
+	{ 
 		printf("TCP FAILED TO BIND!!!\n"); 	
-		return EXIT_FAILURE; 
+		exit(1); 
 	}
 	
-	if(listen(options->tcp_listen_sock, BACKLOG) == -1) { 
+	if(listen(options->tcp_listen_sock, BACKLOG) == -1) 
+	{ 
 		perror("client: listen_tcp"); 
 		return EXIT_FAILURE; 
 	} 	
 
-	//data_hints->type = TCP_SOCK_LISTEN; 
 	options->tcp_listen_ev.events = EPOLLIN; 
 	options->tcp_listen_ev.data.ptr = (void *)TCP_SOCK_LISTEN; 
 
@@ -343,7 +370,8 @@ int tcp_socket_server_accept(options_t * options)
 	sin_size = sizeof(their_addr); 
 
 	if((options->tcp_sock = accept
-		(options->tcp_listen_sock, (struct sockaddr *) &their_addr, &sin_size)) == -1) { 
+		(options->tcp_listen_sock, (struct sockaddr *) &their_addr, &sin_size)) == -1) 
+	{ 
 		perror("accept_tcp"); 	
 		return EXIT_FAILURE; 
 	}	
@@ -371,6 +399,7 @@ int configure_epoll(options_t *options)
 		perror("epoll_data"); 	
 		exit(1); 
 	}
+
 	options->last_read_fd = 0; 
 	options->last_write_fd = 0 ;
 
@@ -415,21 +444,24 @@ int epoll_connections(options_t *options)
 { 
 	int nr_events; 
 	struct epoll_event events;
-	int	timeout = 10000; // 10 seconds 	
+	int	timeout = 1000; // 10 seconds 	
 
-	while(1) { 
+	while(1) 
+	{ 
 		nr_events = epoll_wait(options->epfd_accept, &events,  1 , timeout); 
 		if(nr_events < 0) { 
 			perror("epoll_wait"); 
 			exit(1); 
 		}
 		// no connections came in timeout se we send discovery! 
-		if(nr_events == 0) { 
+		if(nr_events == 0) 
+		{ 
 			send_discovery_message(&options->discovery); 
 		} 
 	
 		// accept tcp 
-		else if( events.data.ptr == (void *)TCP_SOCK_LISTEN) {
+		else if( events.data.ptr == (void *)TCP_SOCK_LISTEN) 
+		{
 			return TCP_SOCK_LISTEN; 
 		} 
 		// accept new parallel 
@@ -458,35 +490,44 @@ int epoll_data_transfer(options_t *options)
 	int timeout = -1; 
 	struct epoll_event events[2];
 
-	while(1) { 
+	while(1) 
+	{ 
 		nr_events = epoll_wait(options->epfd_data, events, 2 , timeout); 
 	
-		if(nr_events < 0) { 
+		if(nr_events < 0) 
+		{ 
 			perror("epoll_wait"); 
 			exit(1); 
 		}
 		
-		for(i = 0; i < nr_events; i++) { 
-			if( events[i].data.ptr == (void *)TCP_SOCK_DATA) { 
+		for(i = 0; i < nr_events; i++) 
+		{ 
+			if( events[i].data.ptr == (void *)TCP_SOCK_DATA) 
+			{ 
 				ret = read_tcp_send_parallel(options); 		
-				if(ret == CLOSE_CONNECTION) { 
+				if(ret == CLOSE_CONNECTION) 
+				{ 
 					timeout = 1000; // 1 second 
 				}
 	
 			} 
-			else if( events[i].data.ptr == (void *) PARALLEL_SOCK_DATA) { 
+			else if( events[i].data.ptr == (void *) PARALLEL_SOCK_DATA) 
+			{ 
 				ret = read_parallel_send_tcp(options); 
-				if(ret == CLOSE_CONNECTION) { 
+				if(ret == CLOSE_CONNECTION) 
+				{ 
 					timeout = 1000;  // 1 second
 				} 
 			} 
-			else { 
+			else 
+			{ 
 				printf("Error [%p] events [%d] read[%d]write[%d]\n",  events[i].data.ptr, nr_events,  
 							options->last_read_fd, 	options->last_write_fd); 
 				exit(1); 
 			}
 		}
-		if(!nr_events) { 
+		if(!nr_events) 
+		{ 
 			remove_client(options); 		 	
 			exit(1) ; 
 		} 
@@ -494,12 +535,14 @@ int epoll_data_transfer(options_t *options)
 }
 
 
-void remove_client(options_t *options) { 
+void remove_client(options_t *options) 
+{ 
 	int count; 
 
 	// close fd and free memory
 	close(options->tcp_sock); 
-	for(count = 0; count < options->num_parallel_sock; count++) {
+	for(count = 0; count < options->num_parallel_sock; count++) 
+	{
 		close(options->parallel_sock[count]); 
 	} 
 	free(options->parallel_sock); 	
@@ -524,23 +567,35 @@ int read_parallel_send_tcp(options_t *options)
 		perror("sctp_recvmsg"); 
 		return EXIT_FAILURE; 
 	} 
-	if(!size) { 
+	if(!size) 
+	{ 
+		if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
+			options->parallel_sock[options->last_read_fd], 
+			&options->parallel_ev)) 
+		{ 
+			printf("FD = %d\n", options->last_read_fd); 
+			perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_DEL in close");  
+			exit(1); 
+		}
 		return CLOSE_CONNECTION; 	
 	} 
 
 
-	if(options->data_verbose) { 
+	if(options->data_verbose) 
+	{ 
 		printf("sctp_recv [%d] --> [%s]\n", options->last_read_fd, buffer); 
 	} 
 
-	if(send(options->tcp_sock, buffer, size, 0) == -1) { 
+	if(send(options->tcp_sock, buffer, size, 0) == -1) 
+	{ 
 		perror("send"); 
 		return EXIT_FAILURE; 
 	} 	
-
 	if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
 		options->parallel_sock[options->last_read_fd], 
-		&options->parallel_ev)) { 
+		&options->parallel_ev)) 
+	{ 
+		printf("FD = %d\n", options->last_read_fd); 
 		perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_DEL");  
 		exit(1); 
 	}
@@ -549,7 +604,8 @@ int read_parallel_send_tcp(options_t *options)
 
 	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
 		options->parallel_sock[options->last_read_fd], 
-		&options->parallel_ev)) { 
+		&options->parallel_ev)) 
+	{ 
 		perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_ADD");  
 		exit(1); 
 	} 
@@ -562,16 +618,27 @@ int read_tcp_send_parallel(options_t *options)
 	int size; 
 	char buffer[MAX_BUFFER];
 
-	if( (size = recv(options->tcp_sock, buffer, sizeof(buffer), 0)) == -1) { 
+	if( (size = recv(options->tcp_sock, buffer, sizeof(buffer), 0)) == -1) 
+	{ 
 		perror("read_tcp_send_parallel, recv"); 
 		return EXIT_FAILURE; 
 	} 
-	if(!size) { 
+	if(!size) 
+	{ 	
 		// tcp client closed connection ; 	
+		if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
+			options->tcp_sock, 
+			&options->tcp_ev)) 
+		{ 
+				printf("FD = %d\n", options->last_read_fd); 
+				perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_DEL");  
+				exit(1); 
+		}
 		return CLOSE_CONNECTION; 	
 	} 
 
-	if(options->data_verbose) { 
+	if(options->data_verbose) 
+	{ 
 		printf(" TCP read -> [%s]\n", buffer); 
 	} 
 			
@@ -581,37 +648,45 @@ int read_tcp_send_parallel(options_t *options)
 		perror("read_tcp_send_parallel sctp_sendmsg"); 		
 		return EXIT_FAILURE; 
 	} 
+/*
 	if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
 			options->parallel_sock[options->last_write_fd], 
-			&options->parallel_ev)) { 
+			&options->parallel_ev)) 
+	{ 
+		printf("FD = %d\n", options->last_write_fd); 
 		perror("epoll_ctl read_tcp_send_parallel EPOLL_CTL_DEL"); 	
 		exit(1); 
 	}
+*/ 
 
 	increment_index(options, WRITE_FD); 
-
+/*
 	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
 			options->parallel_sock[options->last_write_fd], 
-			&options->parallel_ev)) { 
-		perror("epoll_ctl read_tcp_send_parallel EPOLL_CTL_DEL"); 	
+			&options->parallel_ev)) 
+	{ 
+		perror("epoll_ctl read_tcp_send_parallel EPOLL_CTL_ADD"); 	
 		exit(1); 
 	} 
-	
+*/ 	
 	return EXIT_SUCCESS; 
 }
 
 void increment_index(options_t *options, int type) 
 { 
 
-	if(type == WRITE_FD) { 	
+	if(type == WRITE_FD) 
+	{ 	
 		options->last_write_fd++; 
 		options->last_write_fd %=options->num_parallel_sock;  
 	}
-	else if (type == READ_FD) { 
+	else if (type == READ_FD) 
+	{ 
 		options->last_read_fd++; 
 		options->last_read_fd%=options->num_parallel_sock; 
 	} 
-	else { 
+	else 
+	{ 
 		printf("Invalid type!\n"); 
 	}
 }
@@ -624,7 +699,8 @@ int init_sockets(options_t *options)
 	options->num_clients = 0; 
 	options->epfd_accept = epoll_create(100); 
 
-	if(options->epfd_accept < 0 ) { 
+	if(options->epfd_accept < 0 ) 
+	{ 
 		perror("epoll_create"); 
 	}
 
@@ -637,7 +713,8 @@ int init_sockets(options_t *options)
 	if( 
 		options->parallel_listen_socks == NULL ||
 		options->parallel_sock == NULL 
-	) { 
+	) 
+	{ 
 		printf("init_socks failed to malloc something\n"); 
 		exit(-1); 
 	}
@@ -652,15 +729,26 @@ void setnonblocking(int sock)
    int opts;
 
    opts = fcntl(sock,F_GETFL);
-   if (opts < 0) {
+   if (opts < 0) 
+	{
       perror("fcntl(F_GETFL)");
       exit(EXIT_FAILURE);
    }
    opts = (opts | O_NONBLOCK);
-   if (fcntl(sock,F_SETFL,opts) < 0) {
+   if (fcntl(sock,F_SETFL,opts) < 0) 
+	{
       perror("fcntl(F_SETFL)");
       exit(EXIT_FAILURE);
    }
    return;
 }
 
+// get sockaddr, IPv4 or IPv6:
+void *get_in_addr(struct sockaddr *sa)
+{
+	if (sa->sa_family == AF_INET) {
+		return &(((struct sockaddr_in*)sa)->sin_addr);
+	}
+
+	return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}

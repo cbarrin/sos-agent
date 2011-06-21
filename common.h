@@ -7,6 +7,7 @@
 #define SCTP_CONNECT_TO_ADDR "130.127.38.35"
 #define DISCOVERY_DEST_ADDR "1.1.1.1"
 #define DISCOVERY_PORT "9997"
+#define CONTROLLER_MSG_PORT "9998"
 
 #define SCTP 1
 #define TCP 2
