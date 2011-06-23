@@ -36,6 +36,7 @@ typedef struct options_struct {
 	int epfd_data; 
 	fd_set read_socks; 
 	int num_clients; 
+	char *tcp_bind_ip; 
 	
 	int data_verbose; 		/*If enabled this will print data */  
 	int protocol;  					/* Parallel Socket protocol to use SCTP/TCP */ 

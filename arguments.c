@@ -25,7 +25,7 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 	int opt; 
 	memset(options, 0, sizeof(options_t)); 
 
-	while(( opt = getopt(argc, argv, "p:vdc:")) != -1) { 
+	while(( opt = getopt(argc, argv, "p:vdc:b:")) != -1) { 
 		switch (opt) { 
 			case 'p': 
 				printf("Protocol = [%s]\n", optarg); 
@@ -49,6 +49,11 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 			case 'd':
 				printf("will print tcpdata\n"); 
 				options->data_verbose = 1; 
+				break; 
+			case 'b':
+				options->tcp_bind_ip = calloc(1, sizeof(char) *strlen(optarg) +1); 
+				strcpy(options->tcp_bind_ip, optarg); 
+				printf("binding tcp %s\n", options->tcp_bind_ip); 
 				break; 
 			case '?':
 				display_usage(); 

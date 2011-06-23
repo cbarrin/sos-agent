@@ -308,7 +308,8 @@ int create_tcp_server_listen(options_t * options)
 	* Create a tcp socket and bind, listen accept. 
 	*/ 
 
-	if (( ret = getaddrinfo(NULL, TCP_PORT, &hints, &servinfo)) != 0) 
+	
+	if (( ret = getaddrinfo(options->tcp_bind_ip, TCP_PORT, &hints, &servinfo)) != 0) 
 	{
 		printf("getaddrinfo: %s\n", gai_strerror(ret)); 
 		return EXIT_FAILURE; 
