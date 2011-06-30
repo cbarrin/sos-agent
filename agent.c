@@ -27,7 +27,7 @@
 
 int main( int argc, char **argv) { 
 
-	
+	int status; 	
 	options_t options; 	
 	get_arguments(&options, argc, argv); 
 	
@@ -41,7 +41,7 @@ int main( int argc, char **argv) {
 		if((ret = epoll_connections(&options)) )  { 
 			get_controller_message(&options.controller); 
 			i = fork(); 
-			if(i == 0) { 
+			if(i) { 
 				if(ret == TCP_SOCK_LISTEN) { 
 					handle_tcp_accept(&options); 
 				} 	
@@ -51,6 +51,7 @@ int main( int argc, char **argv) {
 				configure_epoll(&options); 
 				epoll_data_transfer(&options); 
 			} 
+			wait(&status); 
 		}
 	} 
 	return EXIT_SUCCESS; 
