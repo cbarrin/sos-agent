@@ -465,10 +465,6 @@ int epoll_connections(options_t *options)
 		// no connections came in timeout se we send discovery! 
 		if(nr_events == 0) 
 		{ 
-			if(options->verbose) 
-			{
-				printf("sending discovery message\n"); 
-			} 
 			send_discovery_message(&options->discovery); 
 		} 
 		// accept tcp 
