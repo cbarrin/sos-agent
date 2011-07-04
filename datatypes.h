@@ -20,8 +20,10 @@ typedef struct options_struct {
 	struct epoll_event tcp_listen_ev; 
 	struct epoll_event events_accept[2]; 
 		
-	struct epoll_event tcp_ev; 	
-	struct epoll_event parallel_ev; 
+	struct epoll_event tcp_ev_in; 	
+	struct epoll_event parallel_ev_in; 
+	struct epoll_event tcp_ev_out; 	
+	struct epoll_event parallel_ev_out; 
 
 	int *parallel_sock;  /* parallel_data */ 
 	int tcp_sock; 	 /* tcp data */ 
@@ -34,9 +36,19 @@ typedef struct options_struct {
 	int highsock; 
 	int epfd_accept; 
 	int epfd_data; 
+
+	int epfd_data_out_tcp; 
+	int epfd_data_out_parallel; 
 	fd_set read_socks; 
 	int num_clients; 
 	char *tcp_bind_ip; 
+
+	int  buf_parallel_size; 
+	char buf_parallel_data[MAX_BUFFER]; 
+	int buf_tcp_size; 
+	char buf_tcp_data[MAX_BUFFER]; 
+
+
 	
 	int data_verbose; 		/*If enabled this will print data */  
 	int protocol;  					/* Parallel Socket protocol to use SCTP/TCP */ 

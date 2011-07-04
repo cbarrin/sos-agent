@@ -132,11 +132,11 @@ int create_sctp_sockets_server(options_t *options)
 	} 
 
 
-	options->parallel_ev.events = EPOLLIN; 	
-	options->parallel_ev.data.ptr = (void *)PARALLEL_SOCK_LISTEN;
+	options->parallel_ev_in.events = EPOLLIN; 	
+	options->parallel_ev_in.data.ptr = (void *)PARALLEL_SOCK_LISTEN;
 
 	if(epoll_ctl(options->epfd_accept, EPOLL_CTL_ADD, options->parallel_listen_socks[0], 
-			&options->parallel_ev))   
+			&options->parallel_ev_in))   
 	{ 
 			perror("epoll_ctl sctp"); 
 			exit(1); 
@@ -394,42 +394,76 @@ int close_data(options_t * options)
 int configure_epoll(options_t *options) 
 { 
 	int count; 
+
+	options->buf_tcp_size = 0; 
+	options->buf_parallel_size = 0; 
+
+	options->last_read_fd = 0; 
+	options->last_write_fd = 0 ;
 	options->epfd_data = epoll_create(options->num_parallel_sock + 1); 
-	if(options->epfd_data < 0) 
+	options->epfd_data_out_tcp = epoll_create(1); 
+	options->epfd_data_out_parallel = epoll_create(1);  
+
+	if(options->epfd_data < 0 || 
+		options->epfd_data_out_tcp < 0 || 
+		options->epfd_data_out_parallel < 0) 
 	{ 
 		perror("epoll_data"); 	
 		exit(1); 
 	}
 
-	options->last_read_fd = 0; 
-	options->last_write_fd = 0 ;
-
-	options->tcp_ev.data.ptr = (void *)TCP_SOCK_DATA; 
-	options->tcp_ev.events = EPOLLIN; 
-
+	/* setup tcp polling */ 
+	options->tcp_ev_in.data.ptr = (void *)TCP_SOCK_DATA; 
+	options->tcp_ev_in.events = EPOLLIN; 
+	setnonblocking(options->tcp_sock);
 	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
 			options->tcp_sock, 
-			&options->tcp_ev)) 
+			&options->tcp_ev_in)) 
 	{ 
-		perror("epoll_ctl tcp_socket_server_accept");  
+		perror("epoll_ctl tcp_configure epoll_in");  
 		exit(1); 
 	} 
 
-	options->parallel_ev.events = EPOLLIN; 
-	options->parallel_ev.data.ptr = (void *) PARALLEL_SOCK_DATA; 
+	options->tcp_ev_out.events = EPOLLOUT; 
+	if(epoll_ctl(options->epfd_data_out_tcp, 
+			EPOLL_CTL_ADD, 
+			options->tcp_sock, &options->tcp_ev_out))
+	{
+		perror("epoll_ctl tcp_configure epoll_out"); 
+		exit(1); 
+	} 
+
+
+	/* setup parallel polling */ 
+
+	options->parallel_ev_in.events = EPOLLIN; 
+	options->parallel_ev_in.data.ptr = (void *) PARALLEL_SOCK_DATA; 
 
 	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD,
 			options->parallel_sock[0], 
-			&options->parallel_ev)) 
+			&options->parallel_ev_in)) 
 	{ 
-		perror("epoll_ctl  create_sctp_sockets_client"); 
+		perror("epoll_ctl  configure_epoll parallel_in"); 	
 		exit(1); 
 	}
 
+	options->parallel_ev_out.events = EPOLLOUT; 
+	if(epoll_ctl(options->epfd_data_out_parallel, 
+			EPOLL_CTL_ADD, options->parallel_sock[0], 
+			&options->parallel_ev_out)) 
+	{  
+		perror("epoll_ctl  configure_epoll parallel_out"); 	
+		exit(1); 
+	} 
+
+
+
 	// close listen sockets (child doesn't need to know about these) 
+	// And set parallel sockets to nonblocking
 	for(count = 0; count < options->num_parallel_sock; count++) 
 	{ 
 		close(options->parallel_listen_socks[count]); 
+		setnonblocking(options->parallel_sock[count]);
 	} 
 	free(options->parallel_listen_socks); 	
 	close(options->tcp_listen_sock); 
@@ -497,6 +531,7 @@ int epoll_data_transfer(options_t *options)
 	
 	int timeout = -1; 
 	struct epoll_event events[2];
+	struct epoll_event temp;
 
 	while(1) 
 	{ 
@@ -512,20 +547,25 @@ int epoll_data_transfer(options_t *options)
 		{ 
 			if( events[i].data.ptr == (void *)TCP_SOCK_DATA) 
 			{ 
-				ret = read_tcp_send_parallel(options); 		
-				if(ret == CLOSE_CONNECTION) 
-				{ 
-					timeout = 1000; // 1 second 
-				}
-	
+				if((epoll_wait(options->epfd_data_out_parallel, &temp, 1, 0)) > 0) 
+				{
+					ret = read_tcp_send_parallel(options); 		
+					if(ret == CLOSE_CONNECTION) 
+					{ 
+						timeout = 1000; // 1 second 
+					}
+				} 
 			} 
 			else if( events[i].data.ptr == (void *) PARALLEL_SOCK_DATA) 
 			{ 
-				ret = read_parallel_send_tcp(options); 
-				if(ret == CLOSE_CONNECTION) 
+				if( (epoll_wait(options->epfd_data_out_tcp, &temp, 1, 0)) > 0) 
 				{ 
-					timeout = 1000;  // 1 second
-				} 
+					ret = read_parallel_send_tcp(options); 
+					if(ret == CLOSE_CONNECTION) 
+					{ 
+						timeout = 1000;  // 1 second
+					} 
+				}
 			} 
 			else 
 			{ 
@@ -562,48 +602,59 @@ void remove_client(options_t *options)
 
 int read_parallel_send_tcp(options_t *options) 
 { 
-	int size; 
+	int ret; 
 	int flags = 0; 
-	char buffer[MAX_BUFFER]; 
 	struct sctp_sndrcvinfo sndrcvinfo; 
 	
 
-	if( (size = sctp_recvmsg( options->parallel_sock[options->last_read_fd], 	
-		(void *)buffer, sizeof(buffer), (struct sockaddr*) NULL, 
-		0, &sndrcvinfo, &flags)) == -1) 
+	if( (!options->buf_tcp_size) && ((options->buf_tcp_size = 
+		sctp_recvmsg( options->parallel_sock[options->last_read_fd], 	
+		(void *)options->buf_tcp_data, sizeof(options->buf_tcp_data), 
+		(struct sockaddr*) NULL, 0, &sndrcvinfo, &flags)) == -1))
 	{ 
 		perror("sctp_recvmsg"); 
 		return EXIT_FAILURE; 
 	} 
-	if(!size) 
+	if(!options->buf_tcp_size) 
 	{ 
 		if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
 			options->parallel_sock[options->last_read_fd], 
-			&options->parallel_ev)) 
+			&options->parallel_ev_in)) 
 		{ 
-			printf("FD = %d\n", options->last_read_fd); 
 			perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_DEL in close");  
 			exit(1); 
 		}
 		return CLOSE_CONNECTION; 	
 	} 
 
-
 	if(options->data_verbose) 
 	{ 
-		printf("sctp_recv [%d] --> [%s]\n", options->last_read_fd, buffer); 
+		printf("sctp_recv [%d] --> [%s]\n",
+				 options->last_read_fd, options->buf_tcp_data); 
 	} 
 
-	if(send(options->tcp_sock, buffer, size, 0) == -1) 
+	ret = send(options->tcp_sock, options->buf_tcp_data, 
+			options->buf_tcp_size, 0); 
+
+	if(ret == EAGAIN ||  EWOULDBLOCK == ret)  
 	{ 
-		perror("send"); 
-		return EXIT_FAILURE; 
+		// we need to hold on to data to send next time
+		if(options->verbose) { 
+			printf("send buffer full\n"); 
+		} 
+		return EXIT_SUCCESS; 
 	} 	
+	else if(ret == -1) 
+	{
+		perror("tcp_send"); 
+		exit(1); 
+
+	} 
+	options->buf_tcp_size = 0; 
 	if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
 		options->parallel_sock[options->last_read_fd], 
-		&options->parallel_ev)) 
+		&options->parallel_ev_in)) 
 	{ 
-		printf("FD = %d\n", options->last_read_fd); 
 		perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_DEL");  
 		exit(1); 
 	}
@@ -612,7 +663,7 @@ int read_parallel_send_tcp(options_t *options)
 
 	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
 		options->parallel_sock[options->last_read_fd], 
-		&options->parallel_ev)) 
+		&options->parallel_ev_in)) 
 	{ 
 		perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_ADD");  
 		exit(1); 
@@ -623,22 +674,24 @@ int read_parallel_send_tcp(options_t *options)
 
 int read_tcp_send_parallel(options_t *options) 
 { 
-	int size; 
-	char buffer[MAX_BUFFER];
 
-	if( (size = recv(options->tcp_sock, buffer, sizeof(buffer), 0)) == -1) 
+	int ret; 
+	
+	if( (!options->buf_parallel_size) && 
+			((options->buf_parallel_size = 
+			recv(options->tcp_sock, options->buf_parallel_data, 
+			sizeof(options->buf_parallel_data), 0)) == -1)) 
 	{ 
 		perror("read_tcp_send_parallel, recv"); 
 		return EXIT_FAILURE; 
 	} 
-	if(!size) 
+	if(!options->buf_parallel_size) 
 	{ 	
 		// tcp client closed connection ; 	
 		if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
 			options->tcp_sock, 
-			&options->tcp_ev)) 
+			&options->tcp_ev_in)) 
 		{ 
-				printf("FD = %d\n", options->last_read_fd); 
 				perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_DEL");  
 				exit(1); 
 		}
@@ -647,36 +700,48 @@ int read_tcp_send_parallel(options_t *options)
 
 	if(options->data_verbose) 
 	{ 
-		printf(" TCP read -> [%s]\n", buffer); 
+		printf(" TCP read -> [%s]\n", options->buf_parallel_data); 
 	} 
 			
-	if( (sctp_sendmsg(options->parallel_sock[options->last_write_fd], buffer, size, 
-			NULL, 0, 0, 0, 0, 0, 0)) == -1) 
+	ret = sctp_sendmsg(options->parallel_sock[options->last_write_fd], 
+			options->buf_parallel_data, options->buf_parallel_size, 
+			NULL, 0, 0, 0, 0, 0, 0); 
+
+		
+	// send buffer is full we did not send
+	if(ret == EAGAIN ||  EWOULDBLOCK == ret)  
+	{ 
+		if(options->verbose) { 
+			printf("send buffer full\n"); 
+		} 
+		return EXIT_SUCCESS; 
+		// We  need to hold on to data to send again		
+	} 
+	else if (ret  == -1) 
 	{
 		perror("read_tcp_send_parallel sctp_sendmsg"); 		
 		return EXIT_FAILURE; 
 	} 
-/*
-	if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
+
+	options->buf_parallel_size = 0; 
+	if(epoll_ctl(options->epfd_data_out_parallel, EPOLL_CTL_DEL, 
 			options->parallel_sock[options->last_write_fd], 
-			&options->parallel_ev)) 
+			&options->parallel_ev_out)) 
 	{ 
-		printf("FD = %d\n", options->last_write_fd); 
 		perror("epoll_ctl read_tcp_send_parallel EPOLL_CTL_DEL"); 	
 		exit(1); 
 	}
-*/ 
 
 	increment_index(options, WRITE_FD); 
-/*
-	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
+
+	if(epoll_ctl(options->epfd_data_out_parallel, EPOLL_CTL_ADD, 
 			options->parallel_sock[options->last_write_fd], 
-			&options->parallel_ev)) 
+			&options->parallel_ev_out)) 
 	{ 
 		perror("epoll_ctl read_tcp_send_parallel EPOLL_CTL_ADD"); 	
 		exit(1); 
 	} 
-*/ 	
+
 	return EXIT_SUCCESS; 
 }
 
