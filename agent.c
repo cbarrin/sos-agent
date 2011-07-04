@@ -27,7 +27,6 @@
 
 int main( int argc, char **argv) { 
 
-	int status; 	
 	options_t options; 	
 	get_arguments(&options, argc, argv); 
 	
@@ -35,13 +34,26 @@ int main( int argc, char **argv) {
 	create_tcp_server_listen(&options); 
 	create_parallel_server_listen(&options); 
 	int i, ret; 
+	int fd[2]; 
+	char data = 0; 
 
 	// do our polling stuff 
 	while(1) { 
 		if((ret = epoll_connections(&options)) )  { 
 			get_controller_message(&options.controller); 
+			if(pipe(fd) != 0) 
+			{ 
+				printf("Pipe failed\n"); 
+				exit(1); 
+			} 
 			i = fork(); 
-			if(i) { 
+			if( i < 0) 
+			{ 
+				printf("Fork() failed\n"); 
+				exit(1); 
+			} 
+			if(!i) { 
+				close(fd[0]); 
 				if(ret == TCP_SOCK_LISTEN) { 
 					handle_tcp_accept(&options); 
 				} 	
@@ -49,9 +61,21 @@ int main( int argc, char **argv) {
 					handle_parallel_accept(&options); 
 				} 
 				configure_epoll(&options); 
+
+				// signal parent to continue 
+				if(write(fd[1], &data, 1) < 1) { 
+					printf("write failed\n"); 
+				} 
+
+				close(fd[1]); 
 				epoll_data_transfer(&options); 
 			} 
-			wait(&status); 
+			// wait for child to signal to continue
+			close(fd[1]); 
+			if(read(fd[0], &data, 1) < 1) { 
+				printf("Read failed\n"); 
+			} 
+			close(fd[0]); 
 		}
 	} 
 	return EXIT_SUCCESS; 

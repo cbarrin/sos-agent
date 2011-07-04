@@ -468,13 +468,6 @@ int configure_epoll(options_t *options)
 	free(options->parallel_listen_socks); 	
 	close(options->tcp_listen_sock); 
 	
-	/* 
-		This tells Parent he can continue 
-		this is so that the parent doesn't try to 
-		fork another process because this process
-		hasn't finished accepting it
-	*/
-	kill(getppid(), SIGCONT); 
 
 	return EXIT_SUCCESS; 		
 
