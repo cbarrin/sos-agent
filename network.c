@@ -254,7 +254,6 @@ int create_tcp_socket_client(options_t *  options)
 	char port[5]; 
 	memset(port, 0, sizeof(port)); 
 	sprintf(port, "%hi", options->controller.port);
-	printf("AHAHAH %s\n", port); 
 
 
 	/* Make TCP CONNECTION */ 
