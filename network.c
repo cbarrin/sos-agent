@@ -583,7 +583,7 @@ int epoll_data_transfer(options_t *options) {
 					else { printf("Weird tcp FD is already here??? 2\n");  } 
 
 					// need to remove poll out on parallel 
-					if(options->last_write_fd  ==  options->last_read_fd) { 
+					if(options->last_write_fd  ==  options->last_read_fd && options->blocked_send_tcp == -1) { 
 						options->parallel_ev_in.events = EPOLLIN; 	
 						if(epoll_ctl(options->epfd_data, EPOLL_CTL_MOD, 
 							options->parallel_sock[options->last_write_fd], 
