@@ -27,6 +27,8 @@ typedef struct options_struct {
 
 	int *parallel_sock;  /* parallel_data */ 
 	int tcp_sock; 	 /* tcp data */ 
+	int blocked_send_parallel; 
+	int blocked_send_tcp; 
 
 	int last_read_fd; 
 	int last_write_fd; 

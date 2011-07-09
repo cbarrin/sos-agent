@@ -398,6 +398,8 @@ int configure_epoll(options_t *options)
 	options->buf_tcp_size = 0; 
 	options->buf_parallel_size = 0; 
 
+	options->blocked_send_tcp  = -1;  
+	options->blocked_send_parallel  = -1;  
 	options->last_read_fd = 0; 
 	options->last_write_fd = 0 ;
 	options->epfd_data = epoll_create(options->num_parallel_sock + 1); 
@@ -414,8 +416,10 @@ int configure_epoll(options_t *options)
 
 	/* setup tcp polling */ 
 	options->tcp_ev_in.data.ptr = (void *)TCP_SOCK_DATA; 
-	options->tcp_ev_in.events = EPOLLIN; 
+	options->tcp_ev_in.events = EPOLLIN  ; 
+
 	setnonblocking(options->tcp_sock);
+
 	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
 			options->tcp_sock, 
 			&options->tcp_ev_in)) 
@@ -424,7 +428,8 @@ int configure_epoll(options_t *options)
 		exit(1); 
 	} 
 
-	options->tcp_ev_out.events = EPOLLOUT; 
+	options->tcp_ev_out.events = EPOLLOUT ; 
+	options->tcp_ev_out.data.ptr = (void *)TCP_SOCK_DATA_OUT; 
 	if(epoll_ctl(options->epfd_data_out_tcp, 
 			EPOLL_CTL_ADD, 
 			options->tcp_sock, &options->tcp_ev_out))
@@ -448,6 +453,7 @@ int configure_epoll(options_t *options)
 	}
 
 	options->parallel_ev_out.events = EPOLLOUT; 
+	options->parallel_ev_out.data.ptr = (void *) PARALLEL_SOCK_DATA_OUT; 
 	if(epoll_ctl(options->epfd_data_out_parallel, 
 			EPOLL_CTL_ADD, options->parallel_sock[0], 
 			&options->parallel_ev_out)) 
@@ -517,63 +523,333 @@ int epoll_connections(options_t *options)
 * (((is 1 second enough?)))
 */ 
 
-int epoll_data_transfer(options_t *options) 
-{ 
-	int nr_events, i; 
-	int ret; 
-	
-	int timeout = -1; 
-	struct epoll_event events[2];
-	struct epoll_event temp;
 
-	while(1) 
-	{ 
-		nr_events = epoll_wait(options->epfd_data, events, 2 , timeout); 
-	
-		if(nr_events < 0) 
-		{ 
-			perror("epoll_wait"); 
+int epoll_data_transfer(options_t *options) { 
+	int nr_events, i; 
+	int timeout = -1; 
+	int ret; 
+	int tcp_send_deleted = 0; 
+
+	struct epoll_event events[2];
+	while(1) { 
+		nr_events = epoll_wait(options->epfd_data, events, 2, timeout); 
+		if( nr_events < 0)  { 
+			perror("epoll_wait epoll data_transfer"); 
 			exit(1); 
-		}
+		} 
 		
-		for(i = 0; i < nr_events; i++) 
-		{ 
-			if( events[i].data.ptr == (void *)TCP_SOCK_DATA) 
+		// handle events 
+		
+		for( i  = 0; i < nr_events; i++) { 
+			
+
+
+			/* 
+				This section handles getting tcp data to parallel end point 
+			*/ 	
+
+			if(
+				(events[i].events & EPOLLIN && events[i].data.ptr == (void *) TCP_SOCK_DATA)  || 
+				(events[i].events & EPOLLOUT  && events[i].data.ptr == (void *)PARALLEL_SOCK_DATA))
 			{ 
-				if((epoll_wait(options->epfd_data_out_parallel, &temp, 1, 0)) > 0) 
-				{
-					ret = read_tcp_send_parallel(options); 		
-					if(ret == CLOSE_CONNECTION) 
-					{ 
-						timeout = 1000; // 1 second 
-					}
-				} 
-			} 
-			else if( events[i].data.ptr == (void *) PARALLEL_SOCK_DATA) 
-			{ 
-				if( (epoll_wait(options->epfd_data_out_tcp, &temp, 1, 0)) > 0) 
-				{ 
-					ret = read_parallel_send_tcp(options); 
-					if(ret == CLOSE_CONNECTION) 
-					{ 
-						timeout = 1000;  // 1 second
+
+				
+				if(events[i].events & EPOLLOUT && events[i].data.ptr == (void*)PARALLEL_SOCK_DATA ) { 
+					if(options->verbose) { 
+						printf("Parallel send unblocked\n"); 
+					} 
+			
+					options->blocked_send_parallel = -1; 
+
+					if(tcp_send_deleted) { 	
+						tcp_send_deleted = 0; 
+
+						options->tcp_ev_in.events = EPOLLIN; 
+						if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
+							options->tcp_sock, &options->tcp_ev_in))  
+						{ 
+							perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_ADD, tcp_sock 2"); 
+							exit(1); 
+						} 
+					} 
+					else if(options->blocked_send_tcp != -1   ) { 
+						options->tcp_ev_in.events = EPOLLOUT | EPOLLIN; 
+						if(epoll_ctl(options->epfd_data, EPOLL_CTL_MOD, 
+							options->tcp_sock, &options->tcp_ev_in)) 
+						{
+							perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_MOD, tcp_sock 2"); 
+							exit(1); 
+						} 
+					} 
+					else { printf("Weird tcp FD is already here??? 2\n");  } 
+
+					// need to remove poll out on parallel 
+					if(options->last_write_fd  ==  options->last_read_fd) { 
+						options->parallel_ev_in.events = EPOLLIN; 	
+						if(epoll_ctl(options->epfd_data, EPOLL_CTL_MOD, 
+							options->parallel_sock[options->last_write_fd], 
+							&options->parallel_ev_in))  {	
+							perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_MOD, parallel_sock 2"); 
+							exit(1); 
+						} 	
+					} 
+					else { 
+						if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
+							options->parallel_sock[options->last_write_fd], 
+							&options->parallel_ev_in))  
+						{	
+							perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_DEL, parallel_sock 2"); 
+							exit(1); 
+						}  
+					} 
+
+					ret = read_tcp_send_parallel(options); 
+					if(ret == CLOSE_CONNECTION) { 	
+						timeout = 1000; 			
+					} 
+
+				}  
+				else { 
+					ret = epoll_wait(options->epfd_data_out_parallel, &events[i], 1, 0);
+					// both sides are good 
+					if(ret > 0) { 
+						if(options->verbose) { 
+							printf("parallel send not blocked\n"); 
+						} 
+						ret = read_tcp_send_parallel(options); 
+						if(ret == CLOSE_CONNECTION) { 	
+							timeout = 1000; 			
+						} 
+					} 
+					/* 
+					 can't send parallel 
+					 need to remove pollin tcp 
+					 and pollout parallel 
+
+					*/ 
+					else if( ret == 0 ) { 
+						if(options->verbose)  { 
+							printf(" parallel send blocked\n"); 	
+						} 
+
+						options->blocked_send_parallel = options->last_write_fd; 
+
+						// we are polling out on tcp need to just remove pollin
+						if(options->blocked_send_tcp != -1) { 
+							options->tcp_ev_in.events = EPOLLOUT; 
+							if(epoll_ctl(options->epfd_data, EPOLL_CTL_MOD, 
+								options->tcp_sock, &options->tcp_ev_in)) 
+							{ 
+								perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_MOD, tcp_sock"); 
+								exit(1); 
+							} 
+						} 	
+						/// we delete tcp pollin 
+						else { 
+							tcp_send_deleted = 1; 
+							if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
+								options->tcp_sock, &options->tcp_ev_in)) 
+							{ 
+								perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_DEL, tcp_sock"); 
+								exit(1); 
+							} 
+						} 
+
+						if( options->last_write_fd == options->last_read_fd ) { 
+
+							options->parallel_ev_in.events = EPOLLIN | EPOLLOUT; 	
+							if(epoll_ctl(options->epfd_data, EPOLL_CTL_MOD, 
+								options->parallel_sock[options->last_write_fd], 
+								&options->parallel_ev_in))  
+							{	
+			
+								if(errno == ENOENT) 
+								{
+									options->parallel_ev_in.events =  EPOLLOUT; 	
+		
+									if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
+										options->parallel_sock[options->last_write_fd], 
+										&options->parallel_ev_in))  
+									{	
+											perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_ADD"); 
+											exit(1); 
+									}	 
+								}
+								else 
+								{ 
+									perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_MOD, parallel_sock"); 
+									exit(1); 
+								}
+							}
+						} 			
+						else { 
+							options->parallel_ev_in.events =  EPOLLOUT; 	
+							if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
+								options->parallel_sock[options->last_write_fd], 
+								&options->parallel_ev_in))  {	
+									perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_ADD"); 
+									exit(1); 
+							}	 
+						} 
+					} 
+					else { 
+						perror("epoll_wait epfd_data_out_parallel"); 
+						exit(1); 
 					} 
 				}
-			} 
-			else 
+			} 	
+
+
+			/* 
+
+			This section reads parallel and sends data tcp 
+
+			*/ 
+
+			if(
+				(events[i].events & EPOLLIN  && events[i].data.ptr == (void *)PARALLEL_SOCK_DATA) || 
+				(events[i].events & EPOLLOUT && events[i].data.ptr == (void *) TCP_SOCK_DATA)) 
 			{ 
-				printf("Error [%p] events [%d] read[%d]write[%d]\n",  events[i].data.ptr, nr_events,  
-							options->last_read_fd, 	options->last_write_fd); 
-				exit(1); 
+
+				if(events[i].events & EPOLLOUT && events[i].data.ptr == ( void *) TCP_SOCK_DATA) { 
+					if(options->verbose) { 
+						printf("tcp send unblocked\n"); 
+					} 
+
+					options->blocked_send_tcp = -1; 
+
+					if(options->last_read_fd == options->blocked_send_parallel) { 
+						options->parallel_ev_in.events =  EPOLLIN | EPOLLOUT; 
+						if(epoll_ctl(options->epfd_data, EPOLL_CTL_MOD, 
+							options->parallel_sock[options->last_read_fd], 
+							&options->parallel_ev_in)) 
+						{ 
+							perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_MOD, parallel_sock 6"); 
+							exit(1); 
+						}
+					}
+					else { 
+						options->parallel_ev_in.events =  EPOLLIN; 
+						if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
+							options->parallel_sock[options->last_read_fd], 
+							&options->parallel_ev_in)) 
+						{ 
+							perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_ADD, parallel_sock 6"); 
+							exit(1); 
+						}
+					} 
+					/// we need to delete the pollout on tcp now 
+					if(options->blocked_send_parallel != -1) { 
+						tcp_send_deleted = 1; 
+						if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
+							options->tcp_sock, &options->tcp_ev_in)) 
+						{ 
+							perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_DEL, tcp_sock 6"); 
+							exit(1); 
+						}
+					} 
+					else { 
+						options->tcp_ev_in.events = EPOLLIN ; 
+						if(epoll_ctl(options->epfd_data, EPOLL_CTL_MOD, 
+							options->tcp_sock, &options->tcp_ev_in)) 
+						{ 
+							perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_MOD, parallel_sock 6"); 
+							exit(1); 
+						}
+
+					}  
+					ret = read_parallel_send_tcp(options); 	
+					if(ret == CLOSE_CONNECTION) { 
+							timeout = 1000;  
+					} 
+				}
+				else { 
+
+					ret = epoll_wait(options->epfd_data_out_tcp, &events[i], 1, 0); 				
+					if(ret > 0) { 
+						if(options->verbose) { 
+							printf("tcp send not blocked\n"); 
+						} 
+						ret = read_parallel_send_tcp(options); 	
+						if(ret == CLOSE_CONNECTION) { 
+							timeout = 1000;  
+						} 
+					} 
+					/* 
+						we need to remove pollin on parallel  
+						and add a pollout on tcp 
+					*/ 
+					else if (ret == 0) { 
+						if(options->verbose) { 
+							printf("send tcp blocked\n"); 
+						} 
+
+						options->blocked_send_tcp  = options->last_read_fd; 
+
+						// need to remove pollin on parallel socket  
+						if(options->blocked_send_parallel == options->last_read_fd) { 
+
+							options->parallel_ev_in.events = EPOLLOUT; 	
+							if(epoll_ctl(options->epfd_data, EPOLL_CTL_MOD, 
+								options->parallel_sock[options->last_read_fd], 
+								&options->parallel_ev_in))  
+							{	
+								perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_MOD, parallel_sock 5"); 
+								exit(1); 
+							} 
+						}
+						else { 
+							if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
+								options->parallel_sock[options->last_read_fd], 
+								&options->parallel_ev_in)) 
+							{ 
+								perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_DEL, parallel_sock 5"); 
+								exit(1); 
+							}
+						} 
+		
+						// now lets poll out on tcp 
+						if(tcp_send_deleted) { 
+							tcp_send_deleted = 0; 
+							options->tcp_ev_in.events = EPOLLOUT; 
+							if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
+									options->tcp_sock, &options->tcp_ev_in))  
+							{ 
+								perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_ADD, tcp_sock 5"); 
+								exit(1); 
+							}						
+						}
+						else { 
+							options->tcp_ev_in.events = EPOLLOUT | EPOLLIN; 
+							if(epoll_ctl(options->epfd_data, EPOLL_CTL_MOD, 
+									options->tcp_sock, &options->tcp_ev_in))  
+							{ 
+								perror("epoll_data_transfer, read_tcp_send_parallel EPOLL_CTL_MOD, tcp_sock 5"); 
+								exit(1); 
+							}	
+						}
+	
+					} 
+					else {
+						perror("epoll_data_transfer, epfd_data_out_tcp"); 
+						exit(1); 
+					}
+
+				}
 			}
+
 		}
 		if(!nr_events) 
 		{ 
 			remove_client(options); 		 	
 			exit(1) ; 
-		} 
+		} 			
 	}
-}
+
+	return EXIT_SUCCESS; 
+
+} 
+
 
 
 void remove_client(options_t *options) 
@@ -617,6 +893,7 @@ int read_parallel_send_tcp(options_t *options)
 			perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_DEL in close");  
 			exit(1); 
 		}
+ 
 		return CLOSE_CONNECTION; 	
 	} 
 
@@ -626,40 +903,68 @@ int read_parallel_send_tcp(options_t *options)
 				 options->last_read_fd, options->buf_tcp_data); 
 	} 
 
+	
 	ret = send(options->tcp_sock, options->buf_tcp_data, 
 			options->buf_tcp_size, 0); 
-
-	if(ret == EAGAIN ||  EWOULDBLOCK == ret)  
-	{ 
-		// we need to hold on to data to send next time
-		if(options->verbose) { 
-			printf("send buffer full\n"); 
-		} 
-		return EXIT_SUCCESS; 
-	} 	
-	else if(ret == -1) 
+	
+	if(ret == -1) 
 	{
-		perror("tcp_send"); 
+		if(errno == EAGAIN ||  errno == EWOULDBLOCK )  { 
+			if(options->verbose)
+			{
+				printf("TCP send_buffer_full\n"); 
+			} 
+			return EXIT_SUCCESS; 
+		} 
+		perror("tcp send()"); 
 		exit(1); 
-
 	} 
+
 	options->buf_tcp_size = 0; 
-	if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
-		options->parallel_sock[options->last_read_fd], 
-		&options->parallel_ev_in)) 
+	if(options->last_read_fd == options->blocked_send_parallel) 
 	{ 
-		perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_DEL");  
-		exit(1); 
+		options->parallel_ev_in.events = EPOLLOUT; 	
+		if(epoll_ctl(options->epfd_data, EPOLL_CTL_MOD, 
+			options->parallel_sock[options->last_read_fd], 
+			&options->parallel_ev_in))
+		{
+			perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_MOD");  
+			exit(1); 
+		}
 	}
-
+	else { 
+		options->parallel_ev_in.events = EPOLLIN; 	
+		if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
+			options->parallel_sock[options->last_read_fd], 
+			&options->parallel_ev_in)) 
+		{ 
+			perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_DEL");  
+			exit(1); 
+		}
+	}
 	increment_index(options, READ_FD); 
-
-	if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
-		options->parallel_sock[options->last_read_fd], 
-		&options->parallel_ev_in)) 
+	
+	if(options->last_read_fd == options->blocked_send_parallel) 
 	{ 
-		perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_ADD");  
-		exit(1); 
+		options->parallel_ev_in.events = EPOLLIN | EPOLLOUT; 	
+		if(epoll_ctl(options->epfd_data, EPOLL_CTL_MOD, 
+					options->parallel_sock[options->last_read_fd], 
+					&options->parallel_ev_in))  { 
+					perror("eexists"); 
+					exit(1); 
+		}
+	}
+	
+	else 
+	{ 
+		options->parallel_ev_in.events = EPOLLIN; 
+		if(epoll_ctl(options->epfd_data, EPOLL_CTL_ADD, 
+			options->parallel_sock[options->last_read_fd], 
+			&options->parallel_ev_in)) 
+		{ 
+			perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_ADD");  
+			exit(1); 
+		}
 	} 
 
 	return EXIT_SUCCESS; 
@@ -695,26 +1000,29 @@ int read_tcp_send_parallel(options_t *options)
 	{ 
 		printf(" TCP read -> [%s]\n", options->buf_parallel_data); 
 	} 
-			
 	ret = sctp_sendmsg(options->parallel_sock[options->last_write_fd], 
 			options->buf_parallel_data, options->buf_parallel_size, 
 			NULL, 0, 0, 0, 0, 0, 0); 
-
 		
 	// send buffer is full we did not send
-	if(ret == EAGAIN ||  EWOULDBLOCK == ret)  
-	{ 
-		if(options->verbose) { 
-			printf("send buffer full\n"); 
-		} 
-		return EXIT_SUCCESS; 
-		// We  need to hold on to data to send again		
-	} 
-	else if (ret  == -1) 
+	if (ret  == -1) 
 	{
+		if(errno == EAGAIN ||  errno == EWOULDBLOCK)  
+		{ 
+			if(options->verbose) { 
+				printf("send buffer full\n"); 
+			} 
+			return EXIT_SUCCESS; 
+			// We  need to hold on to data to send again		
+		} 
+		if(errno == ECONNRESET) { 
+			printf("FIXME\n"); 
+	
+		} 
 		perror("read_tcp_send_parallel sctp_sendmsg"); 		
 		return EXIT_FAILURE; 
 	} 
+//}
 
 	options->buf_parallel_size = 0; 
 	if(epoll_ctl(options->epfd_data_out_parallel, EPOLL_CTL_DEL, 
@@ -734,7 +1042,6 @@ int read_tcp_send_parallel(options_t *options)
 		perror("epoll_ctl read_tcp_send_parallel EPOLL_CTL_ADD"); 	
 		exit(1); 
 	} 
-
 	return EXIT_SUCCESS; 
 }
 
