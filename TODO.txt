@@ -1,3 +1,4 @@
-Make code run keep running. 
-Parallize connects 
-test suite
+Add test suite 
+Add logging for who connects / disconnects
+Add throughput and amount of data that passes though for each client
+
