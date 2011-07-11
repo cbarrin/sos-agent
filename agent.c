@@ -55,20 +55,14 @@ int main( int argc, char **argv) {
 			if(!i) { 
 				close(fd[0]); 
 				if(ret == TCP_SOCK_LISTEN) { 
-					handle_tcp_accept(&options); 
+					handle_tcp_accept(&options, fd[1]); 
 				} 	
 				else if(ret == PARALLEL_SOCK_LISTEN) { 
-					handle_parallel_accept(&options); 
+					handle_parallel_accept(&options, fd[1]); 
 				} 
 				configure_epoll(&options); 
-
-				// signal parent to continue 
-				if(write(fd[1], &data, 1) < 1) { 
-					printf("write failed\n"); 
-				} 
-
-				close(fd[1]); 
 				epoll_data_transfer(&options); 
+				return EXIT_SUCCESS; 
 			} 
 			// wait for child to signal to continue
 			close(fd[1]); 

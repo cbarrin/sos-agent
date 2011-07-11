@@ -29,11 +29,17 @@
 
 
 
-int handle_tcp_accept(options_t *options) 
+int handle_tcp_accept(options_t *options, int fd) 
 {
+	char data = 0 ; 
 	close(options->controller.sock); 
 	if(!tcp_socket_server_accept(options)) 
 	{ 
+		if(write(fd, &data, 1) < 1) 
+		{ 
+			printf("write failed\n"); 
+		}
+		close(fd); 
 		if(!create_sctp_sockets_client(options)) 
 		{ 
 			if(options->verbose) 
@@ -45,10 +51,10 @@ int handle_tcp_accept(options_t *options)
 	return EXIT_SUCCESS; 
 }
 
-int handle_parallel_accept(options_t *options) 
+int handle_parallel_accept(options_t *options, int fd) 
 { 
 	close(options->controller.sock); 
-	if(!parallel_server_accept(options)) 
+	if(!parallel_server_accept(options, fd)) 
 	{ 
 		if(!create_tcp_socket_client(options)) 
 		{ 
@@ -146,13 +152,13 @@ int create_sctp_sockets_server(options_t *options)
 }
 
 
-int parallel_server_accept(options_t *options)  
+int parallel_server_accept(options_t *options, int fd)  
 { 
 
 	int count; 
 	socklen_t sin_size; 
 	struct sockaddr_storage their_addr; 
-	
+	char data = 0; 	
 	
 	if(options->verbose) 
 	{
@@ -170,8 +176,15 @@ int parallel_server_accept(options_t *options)
 			perror("Accepting sockets!"); 
 			return EXIT_FAILURE; 
 		}
-
-
+		else if(count == 0) 
+		{ 
+			if(write(fd, &data, 1) < 1) 
+			{
+				printf("write failed\n"); 
+				exit(1); 	
+			} 
+			close(fd); 
+		}
 	}
 
 
@@ -237,7 +250,8 @@ int create_sctp_sockets_client(options_t *options)
 			(struct sockaddr *) &servaddr, sizeof(servaddr)) == -1) 
 		{ 
 			perror("client: connect"); 
-			return EXIT_FAILURE; 
+			exit(1); 
+			//return EXIT_FAILURE; 
 		}
 	} 
 	return EXIT_SUCCESS; 
