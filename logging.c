@@ -80,7 +80,6 @@ void parse_xml(request_t *request, char *xml_string)
 
 int send_mysql_data(options_t *options) 
 { 
-	printf("HEREERER\n");	
 	char query[MAX_BUFFER*5]; 
 	double elapsed_accept; 	
 	double elapsed_data; 	
