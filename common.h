@@ -14,7 +14,7 @@
 
 #define SQL_SERVER "130.127.62.2"
 #define USER "sos"
-#define PASSWD "<password>"
+#define PASSWD "sospasswd"
 #define DB "sos"
 
 #define SCTP 1

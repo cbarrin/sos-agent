@@ -1010,14 +1010,25 @@ int read_tcp_send_parallel(options_t *options)
 			recv(options->tcp_sock, options->buf_parallel_data, 
 			sizeof(options->buf_parallel_data), 0)) == -1)) 
 	{ 
+		if(errno == ECONNRESET) { 
+
+			if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
+         	options->tcp_sock, 
+         		&options->tcp_ev_in)) 
+      	{ 
+            	perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_DEL");  
+            	exit(1); 
+      	} 
+			return CLOSE_CONNECTION; 
+		} 
+		
 		perror("read_tcp_send_parallel, recv"); 
-		return EXIT_FAILURE; 
+		exit(1); 
 	}
 	else 
 	{
 		options->numbytes_received += options->buf_parallel_size; 
 	}
-
 
 
 	if(!options->buf_parallel_size) 
@@ -1040,27 +1051,48 @@ int read_tcp_send_parallel(options_t *options)
 	ret = sctp_sendmsg(options->parallel_sock[options->last_write_fd], 
 			options->buf_parallel_data, options->buf_parallel_size, 
 			NULL, 0, 0, 0, 0, 0, 0); 
-		
 	// send buffer is full we did not send
 	if (ret  == -1) 
 	{
 		if(errno == EAGAIN ||  errno == EWOULDBLOCK)  
 		{ 
+
 			if(options->verbose) { 
 				printf("send buffer full\n"); 
 			} 
 			return EXIT_SUCCESS; 
-			// We  need to hold on to data to send again		
 		} 
-		if(errno == ECONNRESET) { 
-			printf("FIXME\n"); 
-	
-		} 
+		else if(errno == ESHUTDOWN) 
+		{	
+			if(options->blocked_send_tcp  == -1) 
+			{ 
+				if(epoll_ctl(options->epfd_data, EPOLL_CTL_DEL, 
+        	 		options->tcp_sock, 
+         			&options->tcp_ev_in)) 
+      		{ 
+           	 	perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_DEL");  
+            	exit(1); 
+      		} 
+			} 
+			else 
+			{	
+				options->tcp_ev_in.events = EPOLLOUT; 
+				if(epoll_ctl(options->epfd_data, EPOLL_CTL_MOD, 
+        	 		options->tcp_sock, 
+         			&options->tcp_ev_in)) 
+      		{ 
+           	 	perror("epoll_ctl read_parallel_send_tcp EPOLL_CTL_DEL");  
+            	exit(1); 
+      		} 
+			}
+
+			return CLOSE_CONNECTION; 	
+
+		}
+		printf("errno = %d\n", errno); 
 		perror("read_tcp_send_parallel sctp_sendmsg"); 		
 		return EXIT_FAILURE; 
 	} 
-//}
-
 	options->buf_parallel_size = 0; 
 	if(epoll_ctl(options->epfd_data_out_parallel, EPOLL_CTL_DEL, 
 			options->parallel_sock[options->last_write_fd], 
