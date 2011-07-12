@@ -10,7 +10,7 @@
 #include <netinet/in.h>
 #include <netinet/sctp.h>
 #include <sys/wait.h>
-#include <signal.h>
+#include <signal.h> 
 #include <ctype.h> 
 #include <pthread.h>
 #include <arpa/inet.h>
@@ -72,14 +72,13 @@ int init_controller_listener(controller_t * controller)
 int get_controller_message(controller_t *controller) 
 { 
 	socklen_t addr_len; 	
-//	struct sockaddr_storage their_addr; 
 	struct sockaddr_in their_addr; 
-//	sockaddr_in client; 
 	int size; 
-	char buf[MAX_BUFFER]; 
+	memset(controller->controller_info, 0, sizeof(controller->controller_info)); 
 	
 	addr_len = sizeof(their_addr); 
-	if( (size = recvfrom(controller->sock, buf, sizeof(buf), 0, 
+	if( (size = recvfrom(controller->sock, controller->controller_info, 
+			sizeof(controller->controller_info), 0, 
 			(struct sockaddr *) &their_addr, &addr_len)) == -1) 
 	{
 		perror("recvfrom get_controller_message\n"); 

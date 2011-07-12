@@ -20,4 +20,5 @@ int close_data(options_t *options);
 int handle_parallel_accept(options_t *options, int fd) ; 
 int handle_tcp_accept(options_t *options, int fd) ; 
 void *get_in_addr(struct sockaddr *sa); 
+void calculate_stats(options_t *options); 
 

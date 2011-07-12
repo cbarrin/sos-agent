@@ -8,9 +8,19 @@ typedef struct controller_struct {
 	short int port; 
 	char send_ip[INET6_ADDRSTRLEN]; 
 	struct addrinfo *dest; 
-	
+	char controller_info[MAX_BUFFER]; 
 }controller_t ; 
 
+typedef struct request_struct { 
+	char ServerIP[MAX_BUFFER]; 
+	char ClientIP[MAX_BUFFER]; 
+	char HomeAgentIP[MAX_BUFFER]; 
+	char HomeAgentID[MAX_BUFFER]; 
+	char ForeignAgentIP[MAX_BUFFER]; 
+	char ForeignAgentID[MAX_BUFFER]; 
+	char DateController[MAX_BUFFER]; 
+	char EndPoint[MAX_BUFFER]; 
+}request_t; 
 
 
 
@@ -29,6 +39,7 @@ typedef struct options_struct {
 	int tcp_sock; 	 /* tcp data */ 
 	int blocked_send_parallel; 
 	int blocked_send_tcp; 
+	int side; 
 
 	int last_read_fd; 
 	int last_write_fd; 
@@ -49,7 +60,11 @@ typedef struct options_struct {
 	char buf_parallel_data[MAX_BUFFER]; 
 	int buf_tcp_size; 
 	char buf_tcp_data[MAX_BUFFER]; 
+	struct timeval accept_start, accept_end; 
+	struct timeval data_start, data_end; 
 
+	int numbytes_received; 
+	int numbytes_sent; 
 
 	
 	int data_verbose; 		/*If enabled this will print data */  

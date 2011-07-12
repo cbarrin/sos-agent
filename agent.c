@@ -23,6 +23,7 @@
 #include "arguments.h"
 #include "network.h"
 #include "controller.h"
+#include "logging.h"
 
 
 int main( int argc, char **argv) { 
@@ -36,6 +37,7 @@ int main( int argc, char **argv) {
 	int i, ret; 
 	int fd[2]; 
 	char data = 0; 
+
 
 	// do our polling stuff 
 	while(1) { 

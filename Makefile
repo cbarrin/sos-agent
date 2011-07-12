@@ -1,7 +1,10 @@
 CC = gcc
-CFLAGS = -Wall -g -O3 -lpthread # -Wextra -Werror
-LIBS = -L/usr/local/lib -lsctp
-CFILES = arguments.c network.c discovery.c agent.c controller.c
+CFLAGS = -Wall -O3 -lpthread  -ggdb -I/usr/include/mysql 
+ # -Wextra -Werror
+LIBS = -L/usr/local/lib -lsctp -L/usr/lib/mysql -lmysqlclient  -I/usr/include/libxml2  -lxml2  
+  #`pkg-config --cflags --libs libxml-2.0`
+
+CFILES = arguments.c network.c discovery.c agent.c controller.c logging.c
 
 all: 
 #	$(CC) $(CFLAGS) -o client client.c $(CFILES) $(LIBS) 

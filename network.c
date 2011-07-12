@@ -17,8 +17,7 @@
 #include <poll.h>
 #include <fcntl.h>
 #include <sys/epoll.h>
-#include <omp.h>
-
+#include <sys/time.h>
 
 #include "common.h"
 #include "datatypes.h"
@@ -26,6 +25,7 @@
 #include "arguments.h"
 #include "network.h"
 #include "discovery.h"
+#include "logging.h"
 
 
 
@@ -33,6 +33,10 @@ int handle_tcp_accept(options_t *options, int fd)
 {
 	char data = 0 ; 
 	close(options->controller.sock); 
+	// start TCP accept time 
+	gettimeofday(&options->accept_start, NULL);  
+	options->side = CLIENT; 
+
 	if(!tcp_socket_server_accept(options)) 
 	{ 
 		if(write(fd, &data, 1) < 1) 
@@ -48,12 +52,15 @@ int handle_tcp_accept(options_t *options, int fd)
 			}
 		}
 	}
+	gettimeofday(&options->accept_end, NULL);  
 	return EXIT_SUCCESS; 
 }
 
 int handle_parallel_accept(options_t *options, int fd) 
 { 
 	close(options->controller.sock); 
+	options->side = SERVER; 
+	gettimeofday(&options->accept_start, NULL);  
 	if(!parallel_server_accept(options, fd)) 
 	{ 
 		if(!create_tcp_socket_client(options)) 
@@ -64,6 +71,7 @@ int handle_parallel_accept(options_t *options, int fd)
 			}
 		}
 	}
+	gettimeofday(&options->accept_end, NULL);  
 	return EXIT_SUCCESS; 
 }
 
@@ -265,7 +273,7 @@ int create_tcp_socket_client(options_t *  options)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC; 
 	hints.ai_socktype = SOCK_STREAM;
-	char port[5]; 
+	char port[10]; 
 	memset(port, 0, sizeof(port)); 
 	sprintf(port, "%hi", options->controller.port);
 
@@ -410,6 +418,8 @@ int configure_epoll(options_t *options)
 
 	options->buf_tcp_size = 0; 
 	options->buf_parallel_size = 0; 
+	options->numbytes_received = 0; 
+	options->numbytes_sent = 0; 
 
 	options->blocked_send_tcp  = -1;  
 	options->blocked_send_parallel  = -1;  
@@ -488,6 +498,7 @@ int configure_epoll(options_t *options)
 	close(options->tcp_listen_sock); 
 	
 
+	gettimeofday(&options->data_start, NULL);  
 	return EXIT_SUCCESS; 		
 
 } 
@@ -854,7 +865,9 @@ int epoll_data_transfer(options_t *options) {
 		}
 		if(!nr_events) 
 		{ 
+			gettimeofday(&options->data_end, NULL);  
 			remove_client(options); 		 	
+			calculate_stats(options); 
 			exit(1) ; 
 		} 			
 	}
@@ -896,6 +909,10 @@ int read_parallel_send_tcp(options_t *options)
 	{ 
 		perror("sctp_recvmsg"); 
 		return EXIT_FAILURE; 
+	} 
+	else 
+	{
+		options->numbytes_sent += options->buf_tcp_size; 
 	} 
 	if(!options->buf_tcp_size) 
 	{ 
@@ -995,7 +1012,14 @@ int read_tcp_send_parallel(options_t *options)
 	{ 
 		perror("read_tcp_send_parallel, recv"); 
 		return EXIT_FAILURE; 
-	} 
+	}
+	else 
+	{
+		options->numbytes_received += options->buf_parallel_size; 
+	}
+
+
+
 	if(!options->buf_parallel_size) 
 	{ 	
 		// tcp client closed connection ; 	
@@ -1137,4 +1161,27 @@ void *get_in_addr(struct sockaddr *sa)
 	}
 
 	return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+
+
+void calculate_stats(options_t *options) { 
+	double elapsed; 	
+	elapsed = ((double)options->accept_end.tv_usec - (double) options->accept_start.tv_usec)/(1000000); 
+	elapsed += options->accept_end.tv_sec -  options->accept_start.tv_sec; 
+	printf("Accept time: [%lf] Seconds\n", elapsed); 
+
+	elapsed = ((double)options->data_end.tv_usec - (double)options->data_start.tv_usec)/(1000000); 
+	elapsed += options->data_end.tv_sec -  options->data_start.tv_sec; 
+
+	printf("Data: [%d] Total  [%d] sent  [%d] receieved\n", 
+		options->numbytes_received + options->numbytes_sent, 
+		options->numbytes_sent, options->numbytes_received); 
+
+ 	printf("Time: [%lf]  Sending [%lf] Bytes/second  Receiving [%lf] Bytes/second\n", elapsed, 
+		(double) options->numbytes_sent/elapsed, (double)options->numbytes_received/elapsed); 
+
+	send_mysql_data(options); 
+
+
+
 }

@@ -9,12 +9,22 @@
 #define DISCOVERY_PORT "9997"
 #define CONTROLLER_MSG_PORT "9998"
 
+
+/* MYSQL INFO */ 
+
+#define SQL_SERVER "130.127.62.2"
+#define USER "sos"
+#define PASSWD "<password>"
+#define DB "sos"
+
 #define SCTP 1
 #define TCP 2
 #define BACKLOG 10
 
 #define READ_FD 100
 #define WRITE_FD 101
+#define SERVER 1001
+#define CLIENT 1002
 
 
 
