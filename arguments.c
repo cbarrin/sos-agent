@@ -51,10 +51,10 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 				options->data_verbose = 1; 
 				break; 
 			case 'e':
-				strcpy(options->controller.send_ip, optarg); 
-				options->controller.port = atoi(TCP_PORT); 
+				sscanf(optarg, "%[^:]:%hi", options->controller.send_ip, 
+						&options->controller.port); 			
 				printf("connection to endpoint: %s:%d\n", 		
-					options->controller.send_ip, atoi(TCP_PORT)); 
+					options->controller.send_ip, options->controller.port); 
 				break; 	
 			case 'b':
 				options->tcp_bind_ip = calloc(1, sizeof(char) *strlen(optarg) +1); 
