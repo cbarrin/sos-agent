@@ -25,7 +25,7 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 	int opt; 
 	memset(options, 0, sizeof(options_t)); 
 
-	while(( opt = getopt(argc, argv, "p:vdc:b:")) != -1) { 
+	while(( opt = getopt(argc, argv, "p:vdc:b:e:")) != -1) { 
 		switch (opt) { 
 			case 'p': 
 				printf("Protocol = [%s]\n", optarg); 
@@ -50,6 +50,12 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 				printf("will print tcpdata\n"); 
 				options->data_verbose = 1; 
 				break; 
+			case 'e':
+				strcpy(options->controller.send_ip, optarg); 
+				options->controller.port = atoi(TCP_PORT); 
+				printf("connection to endpoint: %s:%d\n", 		
+					options->controller.send_ip, atoi(TCP_PORT)); 
+				break; 	
 			case 'b':
 				options->tcp_bind_ip = calloc(1, sizeof(char) *strlen(optarg) +1); 
 				strcpy(options->tcp_bind_ip, optarg); 

@@ -76,6 +76,10 @@ int get_controller_message(controller_t *controller)
 	int size; 
 	memset(controller->controller_info, 0, sizeof(controller->controller_info)); 
 	
+	/* non-OF Mode */ 
+	if(strlen(controller->send_ip)) 
+		return EXIT_SUCCESS; 
+		
 	addr_len = sizeof(their_addr); 
 	if( (size = recvfrom(controller->sock, controller->controller_info, 
 			sizeof(controller->controller_info), 0, 
