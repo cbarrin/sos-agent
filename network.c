@@ -867,7 +867,10 @@ int epoll_data_transfer(options_t *options) {
 		{ 
 			gettimeofday(&options->data_end, NULL);  
 			remove_client(options); 		 	
-			calculate_stats(options); 
+			if(options->logging) 
+			{ 
+				calculate_stats(options); 
+			} 
 			exit(1) ; 
 		} 			
 	}

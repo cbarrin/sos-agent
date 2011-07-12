@@ -70,5 +70,6 @@ typedef struct options_struct {
 	int data_verbose; 		/*If enabled this will print data */  
 	int protocol;  					/* Parallel Socket protocol to use SCTP/TCP */ 
 	int verbose;						/* Verbose Mode 	*/  
+	int logging;
 	int num_parallel_sock;			/* Number of parallel sockets to use */  
 }  options_t; 
