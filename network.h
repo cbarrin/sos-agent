@@ -1,7 +1,6 @@
 int create_parallel_server_listen(options_t *options) ; 
-int create_sctp_sockets_server(options_t *options) ; 
 int parallel_server_accept(options_t *options, int fd);   
-int create_sctp_sockets_client(options_t *options) ; 
+int create_sockets_client(options_t *options) ; 
 int create_tcp_socket_client(options_t *  options) ; 
 int create_tcp_server_listen(options_t * options) ; 
 int tcp_socket_server_accept(options_t * options);  

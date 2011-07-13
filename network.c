@@ -44,7 +44,7 @@ int handle_tcp_accept(options_t *options, int fd)
 			printf("write failed\n"); 
 		}
 		close(fd); 
-		if(!create_sctp_sockets_client(options)) 
+		if(!create_sockets_client(options)) 
 		{ 
 			if(options->verbose) 
 			{ 
@@ -79,30 +79,28 @@ int handle_parallel_accept(options_t *options, int fd)
 
 int create_parallel_server_listen(options_t *options) 
 { 
-
-	if(options->protocol == SCTP) { 
-		return create_sctp_sockets_server(options); 
-	} else if(options->protocol == TCP) { 
-		// FIXME need tcp option
-	} 
-	return EXIT_FAILURE; 
-} 
-
-
-
-int create_sctp_sockets_server(options_t *options) 
-{ 
 	int count; 
 	struct sockaddr_in servaddr; 
-	struct sctp_initmsg initmsg; 
+	//struct sctp_initmsg initmsg; 
 
 
 	for(count = 0; count < options->num_parallel_sock; count++) 
 	{ 
-		if(( options->parallel_listen_socks[count] = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == -1) 
+		if(options->protocol == SCTP) 
 		{ 
-			perror("creating p_listen_sock");   
-			exit(1); 
+			if(( options->parallel_listen_socks[count] = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == -1) 
+			{ 
+				perror("creating p_listen_sock");   
+				exit(1); 
+			}
+		}
+		else if(options->protocol == TCP)
+		{
+			if(( options->parallel_listen_socks[count] = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
+			{ 
+				perror("creating p_listen_sock");   
+				exit(1); 
+			}
 		}
 	}		
 	// we only poll on socket 0 because if we get a hit here the other fd should
@@ -125,6 +123,7 @@ int create_sctp_sockets_server(options_t *options)
 
 	/* specify that a maximum of 5 streams will be available per socket */ 
 	
+/*
 	memset( &initmsg, 0, sizeof(initmsg)); 
 	initmsg.sinit_num_ostreams = NUM_STREAMS; 
 	initmsg.sinit_max_instreams = NUM_STREAMS; 
@@ -139,7 +138,7 @@ int create_sctp_sockets_server(options_t *options)
 			return EXIT_SUCCESS; 
 		}
 	} 
-	
+*/	
 	for( count = 0; count < options->num_parallel_sock; count++) 
 	{ 
 		listen( options->parallel_listen_socks[count], BACKLOG); 
@@ -203,27 +202,42 @@ int parallel_server_accept(options_t *options, int fd)
 	return EXIT_SUCCESS; 
 } 
 
-int create_sctp_sockets_client(options_t *options) 
+int create_sockets_client(options_t *options) 
 { 
 
 	int count; 
 	struct sockaddr_in servaddr; 
-	struct sctp_initmsg initmsg; 
+//	struct sctp_initmsg initmsg; 
 
 
 
 	for(count = 0; count < options->num_parallel_sock; count++)   
 	{ 
-		if(( options->parallel_sock[count] = 
-				socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == -1) 
-		{ 
-			perror("creating p_listen_sock");   
-			exit(1); 
+	
+		if(options->protocol == SCTP) 
+		{
+			if(( options->parallel_sock[count] = 
+					socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == -1) 
+			{ 
+				perror("creating p_listen_sock");   
+				exit(1); 
+			}
+		}
+		else if(options->protocol == TCP) 
+		{
+			if(( options->parallel_sock[count] = 
+					socket(AF_INET, SOCK_STREAM, 0)) == -1) 
+			{ 
+				perror("creating p_listen_sock");   
+				exit(1); 
+			}
+
 		}
 	} 
 
 
 	/* specifiy the maximum number of streams that will be available per socket */ 
+/*
 	memset( &initmsg, 0, sizeof(initmsg) ); 
 	initmsg.sinit_num_ostreams = NUM_STREAMS; 
 	initmsg.sinit_max_instreams = NUM_STREAMS; 
@@ -239,6 +253,7 @@ int create_sctp_sockets_client(options_t *options)
 		}
 	} 
 	
+*/ 
 	/*info about who is at the other end */ 
 	bzero( (void *)&servaddr, sizeof(servaddr) ); 
 	servaddr.sin_family = AF_INET; 
@@ -918,10 +933,10 @@ void remove_client(options_t *options)
 int read_parallel_send_tcp(options_t *options) 
 { 
 	int ret; 
-	int flags = 0; 
-	struct sctp_sndrcvinfo sndrcvinfo; 
+	//int flags = 0; 
+	//struct sctp_sndrcvinfo sndrcvinfo; 
 	
-
+/*
 	if( (!options->buf_tcp_size) && ((options->buf_tcp_size = 
 		sctp_recvmsg( options->parallel_sock[options->last_read_fd], 	
 		(void *)options->buf_tcp_data, sizeof(options->buf_tcp_data), 
@@ -930,6 +945,16 @@ int read_parallel_send_tcp(options_t *options)
 		perror("sctp_recvmsg"); 
 		return EXIT_FAILURE; 
 	} 
+
+*/ 
+	if( (!options->buf_tcp_size) && ((options->buf_tcp_size = 
+		recv(options->parallel_sock[options->last_read_fd], 	
+		(void *)options->buf_tcp_data, sizeof(options->buf_tcp_data), 0)) == -1))
+	{ 
+		perror("sctp_recvmsg"); 
+		return EXIT_FAILURE; 
+	} 
+
 	else 
 	{
 		options->numbytes_sent += options->buf_tcp_size; 
@@ -1068,9 +1093,13 @@ int read_tcp_send_parallel(options_t *options)
 	{ 
 		printf(" TCP read -> [%s]\n", options->buf_parallel_data); 
 	} 
+	ret = send(options->parallel_sock[options->last_write_fd], 
+			options->buf_parallel_data, options->buf_parallel_size, 0); 
+/*
 	ret = sctp_sendmsg(options->parallel_sock[options->last_write_fd], 
 			options->buf_parallel_data, options->buf_parallel_size, 
 			NULL, 0, 0, 0, 0, 0, 0); 
+*/ 
 	// send buffer is full we did not send
 	if (ret  == -1) 
 	{
