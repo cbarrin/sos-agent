@@ -324,17 +324,31 @@ int create_tcp_server_listen(options_t * options)
 	hints.ai_family = AF_UNSPEC; 
 	hints.ai_socktype = SOCK_STREAM; 
 	hints.ai_flags = AI_PASSIVE; // use my IP
+	char port[10]; 
 
 	/** 	
 	* Create a tcp socket and bind, listen accept. 
 	*/ 
 
-	
-	if (( ret = getaddrinfo(options->tcp_bind_ip, TCP_PORT, &hints, &servinfo)) != 0) 
+	if(options->nonOF) 
 	{
-		printf("getaddrinfo: %s\n", gai_strerror(ret)); 
-		return EXIT_FAILURE; 
+		memset(port, 0, sizeof(port)); 
+		sprintf(port, "%hi", options->controller.port); 
+		if (( ret = getaddrinfo(options->tcp_bind_ip, port, &hints, &servinfo)) != 0) 
+		{
+			printf("getaddrinfo: %s\n", gai_strerror(ret)); 
+			return EXIT_FAILURE; 
+		}
 	}
+
+	else 
+	{
+		if (( ret = getaddrinfo(options->tcp_bind_ip, TCP_PORT, &hints, &servinfo)) != 0) 
+		{
+			printf("getaddrinfo: %s\n", gai_strerror(ret)); 
+			return EXIT_FAILURE; 
+		}
+	} 
 
 	/* Loop though all the results and vind to first one we can */ 
 	for( p = servinfo; p != NULL; p = p->ai_next) 

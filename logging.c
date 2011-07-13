@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <mysql.h> 
+#include <time.h>
 
 #include <libxml/xmlmemory.h>
 #include <libxml/parser.h>
@@ -27,7 +28,7 @@
 
 
 
-void parse_xml(request_t *request, char *xml_string) 
+void parse_xml(request_t *request, char *xml_string, options_t *options) 
 {
 
 	xmlDocPtr doc; 
@@ -35,13 +36,42 @@ void parse_xml(request_t *request, char *xml_string)
 	xmlNode *node = NULL; 
 	xmlNode *child = NULL; 
 
+
+	if(options->side == SERVER) 
+	{ 
+		strcpy(request->EndPoint, "SERVER"); 
+	}
+	else 
+	{
+		strcpy(request->EndPoint, "CLIENT"); 
+	}
+
+
+	if(options->nonOF) 
+	{
+		strcpy(request->ClientIP, options->tcp_bind_ip); 
+		strcpy(request->ServerIP,options->controller.send_ip); 
+		strcpy(request->HomeAgentIP,"NO-OF"); 	
+		strcpy(request->HomeAgentID,"-1"); 
+		strcpy(request->ForeignAgentIP, "NO-OF"); 
+		strcpy(request->ForeignAgentID, "-1"); 
+		sprintf(request->DateController,"%ld", (long)time(NULL)); 
+
+		return ; 
+
+	}
+
 	doc = xmlReadMemory(xml_string, strlen(xml_string), 
 				"noname.xml", NULL, 0); 
-	if(doc == NULL) { 
+
+	if(doc == NULL) 
+	{ 
 		printf("Failed to parse document\n"); 
 		printf("[%s]\n", xml_string); 
 		return; 
 	} 
+
+
 
 	root = xmlDocGetRootElement(doc); 
 
@@ -49,7 +79,7 @@ void parse_xml(request_t *request, char *xml_string)
 	{
 		if(node->type == XML_ELEMENT_NODE) 
 		{
-			if(!xmlStrcmp(node->name, (const xmlChar *)"request")) 
+		if(!xmlStrcmp(node->name, (const xmlChar *)"request")) 
 			{
 				for(child = node->children; child; child = child->next) 
 				{
@@ -99,16 +129,8 @@ int send_mysql_data(options_t *options)
 	elapsed_data = ((double)options->data_end.tv_usec - (double)options->data_start.tv_usec)/(1000000); 
 	elapsed_data += options->data_end.tv_sec -  options->data_start.tv_sec; 
 
-	parse_xml(&request, options->controller.controller_info) ; 
-	
-	if(options->side == SERVER) 
-	{ 
-		strcpy(request.EndPoint, "SERVER"); 
-	}
-	else 
-	{
-		strcpy(request.EndPoint, "CLIENT"); 
-	} 
+	parse_xml(&request, options->controller.controller_info, options) ; 
+ 
 
 	sprintf(query, "INSERT INTO log (HomeAgentID, HomeAgentIP, "\
 					  "ForeignAgentID, ForeignAgentIP, ClientIP,"\
