@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <stdio.h> 
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -522,7 +522,10 @@ int epoll_connections(options_t *options)
 		// no connections came in timeout se we send discovery! 
 		if(nr_events == 0) 
 		{ 
-			send_discovery_message(&options->discovery); 
+			if(!options->nonOF) 
+			{ 
+				send_discovery_message(&options->discovery); 
+			} 
 		} 
 		// accept tcp 
 		else if( events.data.ptr == (void *)TCP_SOCK_LISTEN) 

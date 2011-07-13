@@ -55,6 +55,7 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 						&options->controller.port); 			
 				printf("connection to endpoint: %s:%d\n", 		
 					options->controller.send_ip, options->controller.port); 
+				options->nonOF = 1; 
 				break; 	
 			case 'b':
 				options->tcp_bind_ip = calloc(1, sizeof(char) *strlen(optarg) +1); 

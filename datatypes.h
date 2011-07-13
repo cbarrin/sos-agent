@@ -72,4 +72,5 @@ typedef struct options_struct {
 	int verbose;						/* Verbose Mode 	*/  
 	int logging;
 	int num_parallel_sock;			/* Number of parallel sockets to use */  
+	int nonOF; 
 }  options_t; 
