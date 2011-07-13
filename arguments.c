@@ -1,7 +1,7 @@
 #include <unistd.h>
 #include <ctype.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <stdlib.h> 
+#include <stdio.h> 
 #include <string.h>
 #include <poll.h>
 #include <sys/epoll.h>
@@ -25,7 +25,7 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 	int opt; 
 	memset(options, 0, sizeof(options_t)); 
 
-	while(( opt = getopt(argc, argv, "p:vdc:b:e:l")) != -1) { 
+	while(( opt = getopt(argc, argv, "?p:vdc:b:e:l")) != -1) { 
 		switch (opt) { 
 			case 'p': 
 				printf("Protocol = [%s]\n", optarg); 
@@ -67,7 +67,7 @@ int get_arguments(options_t *options,  int argc, char **argv) {
 				break; 
 			case '?':
 				display_usage(); 
-				break;
+				exit(1); 
 		}
 	} 
 	if(check_valid_options(options) == EXIT_SUCCESS) { 
@@ -96,5 +96,11 @@ int check_valid_options(options_t *options) {
 
 void display_usage() { 
 	printf("Usage: \n"); 
-	/*FIXME */ 
+	printf("\t-p Protocol { sctp, tcp }\n"); 
+	printf("\t-v Verbose \n"); 
+	printf("\t-c # (number of parallel connections\n"); 
+	printf("\t-d print tcp data from sockets\n"); 
+	printf("\t-b <ip> bind to ip\n" ); 
+	printf("\t-e <endpoint> connect to endpoint\n"); 
+	printf("\t-l enabled mysql logging\n"); 
 } 
