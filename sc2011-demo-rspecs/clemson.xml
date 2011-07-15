@@ -42,12 +42,12 @@
 
 	<flowspace> 
         <port urn="urn:publicid:IDN+Clemson:expedient:openflow+switch:06:d6:00:26:f1:3f:e4:80+port:43"/>
-	     <dl_type from="2054" to="2054"/>
+	     <dl_type from="2048" to="2048"/>
 		  <nw_src from="10.43.100.0" to="10.43.100.254"/>
 	</flowspace> 
 	<flowspace> 
         <port urn="urn:publicid:IDN+Clemson:expedient:openflow+switch:06:d6:00:26:f1:3f:e4:80+port:43"/>
-	     <dl_type from="2054" to="2054"/>
+	     <dl_type from="2048" to="2048"/>
 		  <nw_dst from="10.43.100.0" to="10.43.100.254"/>
 	</flowspace> 
 
