@@ -69,7 +69,7 @@ int init_controller_listener(controller_t * controller)
 }
 
 
-int get_controller_message(controller_t *controller) 
+int get_controller_message(controller_t *controller, int nonOF) 
 { 
 	socklen_t addr_len; 	
 	struct sockaddr_in their_addr; 
@@ -77,7 +77,7 @@ int get_controller_message(controller_t *controller)
 	memset(controller->controller_info, 0, sizeof(controller->controller_info)); 
 	
 	/* non-OF Mode */ 
-	if(strlen(controller->send_ip)) 
+	if(nonOF) 
 		return EXIT_SUCCESS; 
 		
 	addr_len = sizeof(their_addr); 

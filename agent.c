@@ -42,7 +42,7 @@ int main( int argc, char **argv) {
 	// do our polling stuff 
 	while(1) { 
 		if((ret = epoll_connections(&options)) )  { 
-			get_controller_message(&options.controller); 
+			get_controller_message(&options.controller,options.nonOF); 
 			if(pipe(fd) != 0) 
 			{ 
 				printf("Pipe failed\n"); 
