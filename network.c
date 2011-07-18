@@ -925,10 +925,7 @@ void remove_client(options_t *options)
 		close(options->parallel_sock[count]); 
 	} 
 	free(options->parallel_sock); 	
-	if(options->verbose) 
-	{ 
-		printf("CONNECTION CLOSED!\n"); 
-	}
+	printf("CONNECTION CLOSED!\n"); 
 }
 
 int read_parallel_send_tcp(options_t *options) 
