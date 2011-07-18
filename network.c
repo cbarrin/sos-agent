@@ -313,6 +313,7 @@ int create_tcp_socket_client(options_t *  options)
 		{ 
 			close(options->tcp_sock); 
 			perror("connect_tcp"); 
+			exit(1) ; 
 			continue; 
 		}
 		break; 
