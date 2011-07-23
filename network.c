@@ -117,7 +117,7 @@ int create_parallel_server_listen(options_t *options)
 		if(bind(options->parallel_listen_socks[count], (struct sockaddr *) &servaddr, sizeof(servaddr)) == -1) 
 		{ 
 			perror("server: bind"); 
-			return EXIT_FAILURE; 
+			exit(1);
 		}
 	}
 
