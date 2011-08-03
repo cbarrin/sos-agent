@@ -26,13 +26,47 @@
 
 
 
-int initialize_agent(agent_t *agent) 
+int init_agent(agent_t *agent) 
 {
+	
+	init_poll(agent); 
 	create_listen_sockets(agent); 
 
 	return EXIT_SUCCESS; 
 }
 
+
+int init_poll(agent_t *agent)
+{
+	agent->event_pool = epoll_create(1); 
+	if(agent->event_pool < 0)
+	{
+		perror("epoll_create"); 
+		exit(1); 
+	}
+	return EXIT_SUCCESS; 
+}
+
+
+
+void setnonblocking(int sock)
+{
+   int opts;
+
+   opts = fcntl(sock,F_GETFL);
+   if (opts < 0) 
+	{
+      perror("fcntl(F_GETFL)");
+      exit(EXIT_FAILURE);
+   }
+   opts = (opts | O_NONBLOCK);
+   if (fcntl(sock,F_SETFL,opts) < 0) 
+	{
+      perror("fcntl(F_SETFL)");
+      exit(EXIT_FAILURE);
+   }
+   return;
+}
 
 
 int create_listen_sockets(agent_t *agent)  
@@ -52,9 +86,10 @@ int create_listen_sockets(agent_t *agent)
 
 
 	/*
-	 *  create all listen sockets and bind them
+	 *  create all listen sockets, bind, add to event poll
 	 *
 	 */
+
 	if(agent->options.protocol == TCP) 
 	{
 		bzero( (void *) &servaddr, sizeof(servaddr) ); 
@@ -75,6 +110,7 @@ int create_listen_sockets(agent_t *agent)
 			exit(1); 
 		}
 
+
 		servaddr.sin_port = htons(TCP_PORT); 
 		if( bind(agent->listen_fds.host_listen_sock,
 			(struct sockaddr *) &servaddr, sizeof(servaddr)) == -1)
@@ -84,7 +120,18 @@ int create_listen_sockets(agent_t *agent)
 		}
 
 		listen(agent->listen_fds.host_listen_sock, BACKLOG); 
+		
 
+		agent->listen_fds.event_host.events =  EPOLLIN; 
+//		agent->listen_fds.event_host.data.ptr =  ?
+
+		if( epoll_ctl(agent->event_pool, EPOLL_CTL_ADD, 
+			agent->listen_fds.host_listen_sock, &agent->listen_fds.event_host))
+		{
+			perror("epoll_ctl: host_listen_sock"); 
+			exit(1); 
+		}
+		
 
 		for(i = 0; i < agent->options.num_parallel_connections; i++) 
 		{
@@ -104,6 +151,20 @@ int create_listen_sockets(agent_t *agent)
 			listen(agent->listen_fds.parallel_listen_sock[i], BACKLOG); 
 
 		}
+
+		agent->listen_fds.event_agent.events = EPOLLIN; 
+//		agent->listen_fds.event_agent.data.ptr =? 
+		if( epoll_ctl(agent->event_pool, EPOLL_CTL_ADD, 
+			agent->listen_fds.parallel_listen_sock[0], &agent->listen_fds.event_agent))
+		{
+			perror("epoll_ctl: agent_listen_sock"); 
+			exit(1); 
+		}
+		
+
+
+
+
 	}
 	return EXIT_SUCCESS; 	
 }

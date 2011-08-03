@@ -1,7 +1,26 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <getopt.h>
 #include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <time.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <netinet/sctp.h>
+#include <sys/wait.h>
+#include <signal.h>
+#include <ctype.h>
+#include <pthread.h>
+#include <arpa/inet.h>
+#include <poll.h>
+#include <fcntl.h>
+#include <sys/epoll.h>
+#include <sys/time.h>
+#include <getopt.h>
+
+
 
 
 #include "datatypes.h"

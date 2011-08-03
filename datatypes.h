@@ -18,10 +18,6 @@ enum options{
 }; 
 
 
-#ifndef INET6_ADDRSTRLEN
-   #define INET6_ADDRSTRLEN 16
-#endif
-
 
 typedef  struct options_struct 
 { 
@@ -36,17 +32,24 @@ typedef  struct options_struct
 
 typedef struct listen_fds_struct
 {
-   int host_listen_sock;                /* client side_connection to agent     */ 
+   int host_listen_sock;                  /* client side connection to agent     */ 
+   struct epoll_event event_host;         /* epoll event for client side         */  
    int *parallel_listen_sock;             /* agent parallel connection to agent  */  
-
+   struct epoll_event event_agent;              /* epoll event for agent side          */  
 }listen_fds_t; 
 
 
+typedef struct client_struct 
+{
+   int  host_sock; 
+   int  *parallel_sock; 
+} client_t; 
 
 
 
 typedef struct agent_struct 
 { 
+   int event_pool; 
    struct options_struct options; 
    struct listen_fds_struct  listen_fds; 
 
