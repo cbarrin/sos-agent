@@ -23,6 +23,7 @@
 #include "common.h"
 #include "arguments.h"
 #include "network.h"
+#include "poll.h"
 
 
 
@@ -43,7 +44,25 @@ int poll_loop(agent_t *agent)
 			perror("epoll_wait"); 
 			exit(1); 
 		}
-//		switch (? )	 { }
+		switch( ((event_info_t *) events.data.ptr)->type) { 
+
+			case HOST_SIDE_CONNECT:
+				handle_client_side_connect(agent)		
+				break; 
+			case AGENT_SIDE_CONNECT:
+				handle_agent_side_connect(agent); 
+				break; 
+			case HOST_SIDE_DATA_IN:
+				break;
+			case AGENT_SIDE_DATA_IN:
+				break; 
+			default: 
+				printf("unknown event_into type!!\n"); 
+				exit(1); 
+
+
+
+		}
 	}
 }
 

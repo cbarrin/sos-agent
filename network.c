@@ -181,3 +181,38 @@ int create_listen_sockets(agent_t *agent)
 	return EXIT_SUCCESS; 	
 }
 
+
+/*
+ * This funtion is called when client connets to an agent
+ *
+ */
+
+int handle_client_side_connect(agent_t *agent) 
+{
+
+
+}
+/*
+ * This function is called when an agent is connecting to 
+ * another agent.
+ *
+ */
+
+int handle_agent_side_connect(agent_t *agent)
+{
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
