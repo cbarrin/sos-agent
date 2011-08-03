@@ -74,6 +74,8 @@ int create_listen_sockets(agent_t *agent)
 
 	int i; 
 	struct sockaddr_in servaddr; 
+   event_info_t *event_info; 
+
 
 	agent->listen_fds.parallel_listen_sock = 
 		malloc(sizeof(int) * agent->options.num_parallel_connections); 
@@ -121,9 +123,15 @@ int create_listen_sockets(agent_t *agent)
 
 		listen(agent->listen_fds.host_listen_sock, BACKLOG); 
 		
-
+      event_info = malloc(sizeof(event_info_t)); 
+      if(event_info == NULL)
+      {
+         printf("Failed to malloc event info\n"); 
+         exit(1); 
+      }
+      event_info->type =  HOST_SIDE_CONNECT; 
+		agent->listen_fds.event_host.data.ptr =  event_info;
 		agent->listen_fds.event_host.events =  EPOLLIN; 
-//		agent->listen_fds.event_host.data.ptr =  ?
 
 		if( epoll_ctl(agent->event_pool, EPOLL_CTL_ADD, 
 			agent->listen_fds.host_listen_sock, &agent->listen_fds.event_host))
@@ -152,19 +160,23 @@ int create_listen_sockets(agent_t *agent)
 
 		}
 
+      event_info = malloc(sizeof(event_info_t)); 
+      if(event_info == NULL)
+      {
+         printf("Failed to malloc event info\n"); 
+         exit(1); 
+      }
+      event_info->type =  AGENT_SIDE_CONNECT; 
+
 		agent->listen_fds.event_agent.events = EPOLLIN; 
-//		agent->listen_fds.event_agent.data.ptr =? 
+		agent->listen_fds.event_agent.data.ptr =  event_info; 
+
 		if( epoll_ctl(agent->event_pool, EPOLL_CTL_ADD, 
 			agent->listen_fds.parallel_listen_sock[0], &agent->listen_fds.event_agent))
 		{
 			perror("epoll_ctl: agent_listen_sock"); 
 			exit(1); 
 		}
-		
-
-
-
-
 	}
 	return EXIT_SUCCESS; 	
 }

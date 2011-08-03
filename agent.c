@@ -23,6 +23,7 @@
 #include "common.h"
 #include "arguments.h"
 #include "network.h"
+#include "poll.h"
 
 
 
@@ -36,19 +37,7 @@ int main(int argc, char **argv)
 	init_agent(&agent); 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+	poll_loop(&agent); 
 
 
 
