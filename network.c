@@ -406,9 +406,6 @@ client_t * handle_agent_side_connect(agent_t *agent)
 }
 
 
-
-
-
 client_t * init_new_client(agent_t *agent ) 
 { 
 	client_t *new_client; 	
@@ -430,6 +427,30 @@ client_t * init_new_client(agent_t *agent )
 
 	return new_client; 
 }
+
+
+
+int read_host_send_agent(agent_t * agent, event_info_t *event)
+{
+
+
+   return EXIT_SUCCESS; 
+}
+
+
+
+int read_agent_send_host(agent_t * agent, event_info_t *event)
+{
+
+
+   return EXIT_SUCCESS; 
+}
+
+
+
+
+
+
 
 
 

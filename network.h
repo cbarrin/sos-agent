@@ -8,3 +8,5 @@ void *get_in_addr(struct sockaddr *sa);
 client_t * init_new_client(agent_t *agent ) ; 
 int accept_host_side(agent_t *agent, client_t *new_client) ; 
 int connect_agent_side(agent_t *agent, client_t *new_client) ; 
+int read_host_send_agent(agent_t * agent, event_info_t *event); 
+int read_agent_send_host(agent_t * agent, event_info_t *event); 

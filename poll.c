@@ -127,12 +127,12 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 			
 			if(event_info->type == HOST_SIDE_DATA_IN)
 			{
-//				read_host_send_agent(event_info); 
+				read_host_send_agent(agent, event_info); 
 
 			}
 			else if (event_info->type == AGENT_SIDE_DATA_IN)
 			{
-//				read_agent_send_host(event_info); 
+				read_agent_send_host(agent, event_info); 
 
 			}
 
