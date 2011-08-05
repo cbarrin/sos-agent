@@ -1,3 +1,7 @@
+#define PARENT 0 
+#define CHILD 1 
+
+
 enum defines 
 { 
    FALSE=0, 
@@ -7,6 +11,7 @@ enum defines
    NONE, 
    DATA, 
    BLOCKING  
+  
 };
 
 enum options
@@ -28,6 +33,15 @@ enum poll_event_types
 }; 
 
 
+typedef struct controller_struct
+{
+	int sock; 
+	short int port;
+	char send_ip[INET6_ADDRSTRLEN]; 
+	struct addrinfo *dest; 
+	char controller_info[MAX_BUFFER]; 
+} controller_t; 
+
 
 typedef  struct options_struct 
 { 
@@ -44,28 +58,40 @@ typedef struct listen_fds_struct
 {
    int host_listen_sock;                  /* client side connection to agent     */ 
    struct epoll_event event_host;         /* epoll event for client side         */  
-   int *parallel_listen_sock;             /* agent parallel connection to agent  */  
+   int *agent_listen_sock;             /* agent parallel connection to agent  */  
    struct epoll_event event_agent;        /* epoll event for agent side          */  
 }listen_fds_t; 
 
+typedef struct event_info_struct { 
+   char type; 
+   int fd; 
+   struct client_struct *client; 
+} event_info_t; 
 
 typedef struct client_struct 
 {
-   int  host_sock; 
-   int  *parallel_sock; 
+   int client_event_pool; 
+   struct event_info_struct host_side_event_info;  
+   struct event_info_struct *agent_side_event_info;  
+   struct epoll_event event; 
+   int host_sock; 
+   int *agent_sock; 
 } client_t; 
 
-typedef struct event_info_struct { 
-   char type; 
 
-} event_info_t; 
-
-
+typedef struct discovery_struct 
+{
+   int sock ;
+   struct addrinfo *dest;
+}discovery_t ;
 
 typedef struct agent_struct 
 { 
    int event_pool; 
    struct options_struct options; 
    struct listen_fds_struct  listen_fds; 
+   struct controller_struct controller; 
+   struct discovery_struct discovery; 
+   int message_fd[2]; 
 
 }agent_t; 

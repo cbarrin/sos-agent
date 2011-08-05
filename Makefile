@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -O3 -lpthread -g -ggdb -I/usr/include/mysql
 LIBS = -L/usr/local/lib -lsctp -L/usr/lib/mysql -lmysqlclient  -I/usr/include/libxml2  -lxml2
 
-CFILES = arguments.c network.c agent.c poll.c
+CFILES = arguments.c network.c agent.c poll.c controller.c discovery.c
 
 all: 
 	$(CC) $(CFLAGS) -o agent  $(CFILES) $(LIBS)

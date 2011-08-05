@@ -19,8 +19,8 @@
 #include <sys/epoll.h>
 #include <sys/time.h>
 
-#include "datatypes.h"
 #include "common.h"
+#include "datatypes.h"
 #include "arguments.h"
 #include "network.h"
 #include "poll.h"
