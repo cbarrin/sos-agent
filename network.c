@@ -25,6 +25,7 @@
 #include "network.h"
 #include "controller.h"
 #include "discovery.h"
+#include "packet.pb-c.h"
 
 
 
@@ -429,10 +430,89 @@ client_t * init_new_client(agent_t *agent )
 }
 
 
+int create_packet(event_info_t *event, char *payload, char *serialized_data) { 
+
+	Packet packet = PACKET__INIT; 
+
+	packet.seq_num = event->client->send_seq; 
+	packet.payload = payload; 
+	packet__pack(&packet, (uint8_t *)serialized_data); 	
+
+	event->client->send_seq++; 
+
+
+	return EXIT_SUCCESS; 
+}
+
 
 int read_host_send_agent(agent_t * agent, event_info_t *event)
 {
+	int size; 
+	int ret; 
+	int unsuccessful = 1; 
+	int n_size; 
 
+	char buf[MAX_BUFFER]; 
+
+	/*  seq_num + payload */ 
+	char serialized_data[ sizeof(int) + MAX_BUFFER ]; 
+
+	if(( size = recv(event->fd, buf, sizeof(buf), 0)) == -1) 
+	{
+		perror("recv: read_host_send_agent"); 
+		exit(1); 
+	}
+	// close connection 
+	if(!size) {
+		
+	}
+	
+	create_packet(event, buf, serialized_data); 
+	size = packet__get_packed_size((void *)serialized_data); 	
+
+	/* send size of data and then serialized data */ 
+
+	n_size = htonl(size); 
+	while(unsuccessful)
+	{
+		ret = send(event->client->agent_sock[event->client->last_fd_sent],
+			&n_size, sizeof(n_size), 0); 
+
+		if(ret == -1) 
+		{ 
+			if(errno == EAGAIN) 
+			{ 
+				event->client->last_fd_sent++; 
+			}
+		}
+		else 
+		{
+			unsuccessful = 0; 
+
+			/* we need to loop till this data get's sent size
+			 * we already put the size on this fd 
+			 */
+			while(1) 
+			{
+				ret = send(event->client->agent_sock[event->client->last_fd_sent],
+					serialized_data, size, 0); 
+				if(ret == -1) 
+				{
+					if(errno != EAGAIN)
+					{
+						perror("send: serialzed_data"); 
+						exit(1); 
+					}
+				}
+				else 
+				{
+					break;
+				}
+			}
+		}
+	}
+	event->client->last_fd_sent++; 
+			
 
    return EXIT_SUCCESS; 
 }

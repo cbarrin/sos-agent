@@ -1,0 +1,5 @@
+message packet 
+{
+   required int32 seq_num = 1; 
+   required string payload = 2; 
+}

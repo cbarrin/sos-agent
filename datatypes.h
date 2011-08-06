@@ -58,7 +58,7 @@ typedef struct listen_fds_struct
 {
    int host_listen_sock;                  /* client side connection to agent     */ 
    struct epoll_event event_host;         /* epoll event for client side         */  
-   int *agent_listen_sock;             /* agent parallel connection to agent  */  
+   int *agent_listen_sock;                /* agent parallel connection to agent  */  
    struct epoll_event event_agent;        /* epoll event for agent side          */  
 }listen_fds_t; 
 
@@ -70,6 +70,9 @@ typedef struct event_info_struct {
 
 typedef struct client_struct 
 {
+   int send_seq; 
+   int recv_seq; 
+   int last_fd_sent; 
    int client_event_pool; 
    struct event_info_struct host_side_event_info;  
    struct event_info_struct *agent_side_event_info;  
