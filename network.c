@@ -430,7 +430,7 @@ client_t * init_new_client(agent_t *agent )
 }
 
 
-int create_packet(event_info_t *event, char *payload, char *serialized_data) { 
+int serialize_packet(event_info_t *event, char *payload, char *serialized_data) { 
 
 	Packet packet = PACKET__INIT; 
 
@@ -464,10 +464,11 @@ int read_host_send_agent(agent_t * agent, event_info_t *event)
 	}
 	// close connection 
 	if(!size) {
+		exit(1); 
 		
 	}
 	
-	create_packet(event, buf, serialized_data); 
+	serialize_packet(event, buf, serialized_data); 
 	size = packet__get_packed_size((void *)serialized_data); 	
 
 	/* send size of data and then serialized data */ 
@@ -521,6 +522,54 @@ int read_host_send_agent(agent_t * agent, event_info_t *event)
 
 int read_agent_send_host(agent_t * agent, event_info_t *event)
 {
+	int ret; 
+	int size, n_size; 
+	int size_count = 0; 
+	int packet_size; 
+	char buf[sizeof(int) + MAX_BUFFER]; 
+	Packet *packet; 
+	char serialized_data[ sizeof(int) + MAX_BUFFER ]; 
+
+	while(1) { 
+		if(( size = recv(event->fd, &n_size, sizeof(n_size) - size_count, 0)) == -1)  
+		{ 
+			perror("recv: n_size"); 	
+		}
+		size_count +=size; 
+		if(size_count == sizeof(n_size))
+		{
+			break; 
+		}
+		else 
+		{
+			n_size <<=size; 
+		}
+	}
+
+	packet_size = ntohl(n_size); 
+
+	if(agent->options.verbose_level)
+	{
+		printf("packet_size %d\n", size); 
+	}
+
+	size_count = 0; 
+	while(1) 
+	{
+		if(( size = recv(event->fd, &serialized_data[size_count], packet_size - size_count, 0)) == -1) 		
+		{
+			perror("recv serialized_data"); 
+			exit(1); 
+		}
+		size_count +=size; 
+		if(size_count == packet_size)
+		{
+			break;
+		}
+	}
+
+	packet = packet__unpack(NULL, packet_size,(uint8_t*) serialized_data); 
+	printf("%d [%s]\n", packet->seq_num, packet->payload); 
 
 
    return EXIT_SUCCESS; 
