@@ -92,7 +92,6 @@ int get_arguments(options_t *options,  int argc, char **argv)
 				break;
 	
          case BIND_IP:
-            printf("WTF!\n"); 
             strcpy(options->bind_ip, optarg); 
             break;
 
