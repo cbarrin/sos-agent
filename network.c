@@ -35,6 +35,7 @@ int init_agent(agent_t *agent)
 	init_poll(agent); 
 	create_listen_sockets(agent); 
    init_discovery(&agent->discovery); 
+	init_controller_listener(&agent->controller); 
 
 	return EXIT_SUCCESS; 
 }

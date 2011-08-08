@@ -61,7 +61,7 @@ int init_controller_listener(controller_t * controller)
 	}
 	if(controller->dest == NULL) 
 	{
-		fprintf(stderr, "controller failed to bind\n"); 
+		fprintf(stderr, "controller failed to bind"); 
 		exit(1); 
 	} 
 	return EXIT_SUCCESS; 
@@ -81,7 +81,7 @@ int get_controller_message(controller_t *controller)
 			sizeof(controller->controller_info), 0, 
 			(struct sockaddr *) &their_addr, &addr_len)) == -1) 
 	{
-		perror("recvfrom get_controller_message\n"); 
+		perror("recvfrom get_controller_message"); 
 		exit(1); 
 	}
 	
