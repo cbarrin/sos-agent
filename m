@@ -98,12 +98,17 @@ int create_listen_sockets(agent_t *agent)
 	if(agent->options.protocol == TCP) 
 	{
 		bzero( (void *) &servaddr, sizeof(servaddr) ); 
-		if(strlen(agent->options.bind_ip))
+		if(agent->options.bind_ip) 
 		{
+           printf("FUCK ME\n"); 
+         printf("%s\n", agent->options.bind_ip); 
 			servaddr.sin_addr.s_addr = inet_addr(agent->options.bind_ip);  
 		}
 		else { 
+         printf("HERE222\n"); 
 			servaddr.sin_addr.s_addr = htonl (INADDR_ANY); 
+//			servaddr.sin_addr.s_addr = inet_addr("0.0.0.0");  
+		
 		}
 
 		servaddr.sin_family = AF_INET; 

@@ -40,7 +40,7 @@ int get_arguments(options_t *options,  int argc, char **argv)
 	*		int val ; 
 	*  }
 	*/
-
+   memset(options, 0, sizeof(options_t)); 
 	struct option long_options[] = {
 		{"verbose", 1, 0, VERBOSE}, 
 		{"connections", 1, 0, NUM_CONNECTIONS}, 
@@ -92,6 +92,7 @@ int get_arguments(options_t *options,  int argc, char **argv)
 				break;
 	
          case BIND_IP:
+            printf("WTF!\n"); 
             strcpy(options->bind_ip, optarg); 
             break;
 
