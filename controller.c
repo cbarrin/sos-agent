@@ -25,6 +25,7 @@
 #include "arguments.h"
 #include "network.h"
 #include "controller.h"
+#include "protobuf-rpc.pb-c.h" 
 
 
 int init_controller_listener(controller_t * controller) 
@@ -73,8 +74,11 @@ int get_controller_message(controller_t *controller)
 	socklen_t addr_len; 	
 	struct sockaddr_in their_addr; 
 	int size; 
+   uint8_t buf[MAX_BUFFER];  
+
+   ConnectInfoT *payload; 
+   
 	memset(controller->controller_info, 0, sizeof(controller->controller_info)); 
-	
 		
 	addr_len = sizeof(their_addr); 
 	if( (size = recvfrom(controller->sock, controller->controller_info, 
@@ -84,13 +88,17 @@ int get_controller_message(controller_t *controller)
 		perror("recvfrom get_controller_message"); 
 		exit(1); 
 	}
-	
+
+   payload = connect_info_t__unpack(NULL, size, buf);
+   printf("%s\n", payload->connectip); 
+/*	
 	inet_ntop(their_addr.sin_family, 
 			get_in_addr((struct sockaddr *) &their_addr), 
 			controller->send_ip, sizeof(controller->send_ip)); 
 
 	controller->port = ntohs(their_addr.sin_port); 
 	printf("%s %d\n", controller->send_ip, ntohs(their_addr.sin_port)); 
+ */   
 	return EXIT_SUCCESS; 
 } 
 

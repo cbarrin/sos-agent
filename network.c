@@ -520,11 +520,11 @@ int read_host_send_agent(agent_t * agent, event_info_t *event)
 
 int read_agent_send_host(agent_t * agent, event_info_t *event)
 {
-	int ret; 
+	//int ret; 
 	int size, n_size; 
 	int size_count = 0; 
 	int packet_size; 
-	char buf[sizeof(int) + MAX_BUFFER]; 
+	//char buf[sizeof(int) + MAX_BUFFER]; 
 	Packet *packet; 
 	char serialized_data[ sizeof(int) + MAX_BUFFER ]; 
 
