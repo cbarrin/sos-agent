@@ -89,8 +89,13 @@ int get_controller_message(controller_t *controller)
 		exit(1); 
 	}
 
+   FILE *fp = fopen("./packet", "w"); 
    payload = connect_info_t__unpack(NULL, size, buf);
+   fwrite(buf, size, 1, fp); 
+   fclose(fp); 
    printf("%s\n", payload->connectip); 
+   printf("%s\n", payload->port); 
+   
 /*	
 	inet_ntop(their_addr.sin_family, 
 			get_in_addr((struct sockaddr *) &their_addr), 
