@@ -74,14 +74,14 @@ int get_controller_message(controller_t *controller)
 	socklen_t addr_len; 	
 	struct sockaddr_in their_addr; 
 	int size; 
-   char buf[MAX_BUFFER];  
+   uint8_t buf[MAX_BUFFER];  
 
    ConnectInfoT *payload; 
    
 	memset(controller->controller_info, 0, sizeof(controller->controller_info)); 
 		
 	addr_len = sizeof(their_addr); 
-	if( (size = recvfrom(controller->sock, controller->controller_info, 
+	if( (size = recvfrom(controller->sock, buf, 
 			sizeof(controller->controller_info), 0, 
 			(struct sockaddr *) &their_addr, &addr_len)) == -1) 
 	{
@@ -89,9 +89,10 @@ int get_controller_message(controller_t *controller)
 		exit(1); 
 	}
    
-   sscanf(buf, "%s %hu", controller->send_ip, &controller->port);   
 
-   
+   payload = connect_info_t__unpack(NULL, size, buf); 
+   strcpy(controller->send_ip, payload->connectip); 
+   controller->port = payload->port; 
 /*	
 	inet_ntop(their_addr.sin_family, 
 			get_in_addr((struct sockaddr *) &their_addr), 
