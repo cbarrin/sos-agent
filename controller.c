@@ -74,7 +74,7 @@ int get_controller_message(controller_t *controller)
 	socklen_t addr_len; 	
 	struct sockaddr_in their_addr; 
 	int size; 
-   uint8_t buf[MAX_BUFFER];  
+   char buf[MAX_BUFFER];  
 
    ConnectInfoT *payload; 
    
@@ -88,13 +88,9 @@ int get_controller_message(controller_t *controller)
 		perror("recvfrom get_controller_message"); 
 		exit(1); 
 	}
+   
+   sscanf(buf, "%s %hu", controller->send_ip, &controller->port);   
 
-   FILE *fp = fopen("./packet", "w"); 
-   payload = connect_info_t__unpack(NULL, size, buf);
-   fwrite(buf, size, 1, fp); 
-   fclose(fp); 
-   printf("%s\n", payload->connectip); 
-   printf("%s\n", payload->port); 
    
 /*	
 	inet_ntop(their_addr.sin_family, 
@@ -102,8 +98,8 @@ int get_controller_message(controller_t *controller)
 			controller->send_ip, sizeof(controller->send_ip)); 
 
 	controller->port = ntohs(their_addr.sin_port); 
-	printf("%s %d\n", controller->send_ip, ntohs(their_addr.sin_port)); 
- */   
+   */ 
+	printf("%s %d\n", controller->send_ip, controller->port); 
 	return EXIT_SUCCESS; 
 } 
 
