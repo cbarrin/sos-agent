@@ -2,6 +2,10 @@ CC = gcc
 CFLAGS = -Wall -O3 -lpthread -g -ggdb -I/usr/include/mysql
 LIBS = -L/usr/local/lib -lsctp -L/usr/lib/mysql -lmysqlclient  -I/usr/include/libxml2  -lxml2  -I/usr/local/include  -pthread -L/usr/local/lib -lprotobuf-c -lz -lpthread  
 
+HASHDIR=./uthash
+CFLAGS +=-I$(HASHDIR)
+
+
 CFILES = arguments.c network.c agent.c poll.c controller.c discovery.c packet.pb-c.c protobuf-rpc.pb-c.c
 
 all: 

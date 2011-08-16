@@ -29,7 +29,9 @@ enum poll_event_types
    HOST_SIDE_CONNECT=1, 
    AGENT_SIDE_CONNECT, 
    HOST_SIDE_DATA_IN, 
-   AGENT_SIDE_DATA_IN
+   AGENT_SIDE_DATA_IN, 
+   HOST_SIDE_DATA_OUT, 
+   AGENT_SIDE_DATA_OUT 
 }; 
 
 
@@ -41,6 +43,8 @@ typedef struct controller_struct
 	struct addrinfo *dest; 
 	char controller_info[MAX_BUFFER]; 
 } controller_t; 
+
+
 
 
 typedef  struct options_struct 
@@ -65,21 +69,51 @@ typedef struct listen_fds_struct
 typedef struct event_info_struct { 
    char type; 
    int fd; 
+	int agent_id; 
    struct client_struct *client; 
 } event_info_t; 
 
+typedef struct packet_hash_struct 
+{
+	int id; /* this is the key and also the sequence number */ 
+	int agent_id;  /* agent_sock_buffer[agent_id] == payload data */   
+   int host_sent_size; 
+	uint8_t serialized_data[MAX_BUFFER *2]; 
+	Packet *packet;
+	UT_hash_handle hh; 
+}packet_hash_t; 
+
+
+typedef struct serialized_data_struct 
+{
+   uint8_t serialized_data[MAX_BUFFER *2]; 
+   int host_packet_size; 
+   int host_sent_size; 
+} serialized_data_t; 
+
 typedef struct client_struct 
 {
+	struct packet_hash_struct *buffered_packet_table; 
+	struct packet_hash_struct *buffered_packet; 
+
    int send_seq; 
    int recv_seq; 
+
    int last_fd_sent; 
    int client_event_pool; 
-   struct event_info_struct host_side_event_info;  
-   struct event_info_struct *agent_side_event_info;  
+	int event_poll_out_agent; 
+	int event_poll_out_host; 
+   struct event_info_struct host_side_event_info_in;  
+   struct event_info_struct *agent_side_event_info_in;  
+   struct event_info_struct host_side_event_info_out;  
+   struct event_info_struct *agent_side_event_info_out;  
    struct epoll_event event; 
    int host_sock; 
    int *agent_sock; 
+   struct serialized_data_struct * packet; 
+
 } client_t; 
+
 
 
 typedef struct discovery_struct 

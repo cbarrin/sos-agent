@@ -20,11 +20,18 @@
 #include <omp.h>
 #include <netinet/in.h>
 
+
+
 #include "common.h"
+#include "packet.pb-c.h"
+#include "uthash.h"
 #include "datatypes.h"
 #include "arguments.h"
 #include "network.h"
+#include "poll.h"
 #include "controller.h"
+
+
 #include "protobuf-rpc.pb-c.h" 
 
 
@@ -100,7 +107,7 @@ int get_controller_message(controller_t *controller)
 
 	controller->port = ntohs(their_addr.sin_port); 
    */ 
-	printf("%s %d\n", controller->send_ip, controller->port); 
+	printf("[%s %d]\n", controller->send_ip, controller->port); 
 	return EXIT_SUCCESS; 
 } 
 

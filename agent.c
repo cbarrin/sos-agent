@@ -20,6 +20,8 @@
 #include <sys/time.h>
 
 #include "common.h"
+#include "packet.pb-c.h"
+#include "uthash.h"
 #include "datatypes.h"
 #include "arguments.h"
 #include "network.h"
