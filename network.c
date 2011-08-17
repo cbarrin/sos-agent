@@ -957,7 +957,7 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
                event->client->host_side_event_info.agent_id = agent_id; 
                if(event->client->host_fd_poll == IN) 
                {
-                  printf("HERE222\n"); 
+ //                 printf("HERE222\n"); 
 	         	   event->client->event.events = EPOLLOUT | EPOLLIN;
 	         	   event->client->event.data.ptr = &event->client->host_side_event_info; 
 
@@ -972,7 +972,7 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
                }
                else if(event->client->host_fd_poll == OFF) 
                {
-                  printf("HERE333\n"); 
+  //                printf("HERE333\n"); 
                   event->client->event.events = EPOLLOUT;
 	         	   event->client->event.data.ptr = &event->client->host_side_event_info; 
            		   if(epoll_ctl(event->client->client_event_pool, EPOLL_CTL_ADD, 
