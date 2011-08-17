@@ -901,9 +901,12 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 
 int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd) 
 {
+   
 	int size, size_count; 
    packet_hash_t *send_packet; 
 	int agent_id = event->agent_id;
+
+
 	if(remove_fd)
 	{
       if(event->client->host_fd_poll == INAndOut)
