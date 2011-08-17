@@ -100,6 +100,7 @@ int poll_loop(agent_t *agent)
 				printf("read failed\n"); 
 				exit(1); 
 			} 
+			printf("CONTINUE PARENT\n"); 
       }
       else 
       {
@@ -125,19 +126,20 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 
 	while(1) 
 	{
-//		printf("STUCK?\n"); 
+		printf("STUCK?\n"); 
 		n_events = epoll_wait(client->client_event_pool, &event, 1, timeout); 
-//		printf("not STUCK?\n"); 
+		printf("not STUCK?\n"); 
 
 		if(n_events < 0) 
 		{
 			perror("epoll_wait (client_event_poll)"); 
 			exit(1); 
 		}
-		else { 
+     
+		else if(n_events) { 
 			event_info_t *event_info_host = (event_info_t *)event.data.ptr; 
 			
-			if(event_info_host->type == HOST_SIDE_DATA_IN && event.events & EPOLLIN)
+			if(event_info_host->type == HOST_SIDE_DATA && event.events & EPOLLIN)
 			{
 				n_events = epoll_wait(client->event_poll_out_agent, &event, 1, 0); 
 				if(n_events < 0) 
@@ -148,26 +150,41 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 				if(n_events) 
 				{
 					event_info_t *event_info_agent = (event_info_t *)event.data.ptr; 
-					read_host_send_agent(agent, event_info_host, event_info_agent); 
+					printf("A\n"); 
+					if(read_host_send_agent(agent, event_info_host, event_info_agent) == CLOSE) 
+               {
+                  timeout = 1000; 
+               }  
 				}
 			}
-
-			else if(event_info_host->type == AGENT_SIDE_DATA_OUT && event.events & EPOLLOUT)
+			else if(event_info_host->type == AGENT_SIDE_DATA && event.events & EPOLLOUT)
 			{
 				if(event_info_host->client->packet[event_info_host->agent_id].host_packet_size == 0) 
-				{ printf("ASSERT!!!\n"); exit(1); } 
-				read_host_send_agent(agent, &event_info_host->client->host_side_event_info_out, event_info_host); 
+				{ printf("ASSERT!!! %d \n",event_info_host->agent_id); exit(1); } 
+					printf("b\n"); 
+				if(read_host_send_agent(agent, &event_info_host->client->host_side_event_info, event_info_host)== CLOSE)
+            {
+               timeout = 1000; 
+            } 
 			}
 
 
-			else if (event_info_host->type == AGENT_SIDE_DATA_IN)
+			else if (event_info_host->type == AGENT_SIDE_DATA && event.events & EPOLLIN)
 			{
-				read_agent_send_host(agent, event_info_host); 
+				printf("c %d\n",event_info_host->agent_id); 
+				if(read_agent_send_host(agent, event_info_host) == CLOSE)
+            {
+               timeout = 1000; 
+            } 
 
 			}
-			else if(event_info_host->type == HOST_SIDE_DATA_OUT)
+			else if(event_info_host->type == HOST_SIDE_DATA && event.events & EPOLLOUT )
 			{
-				send_data_host(agent,event_info_host, 1); 
+				printf("d %d\n", event_info_host->agent_id); 
+				if(send_data_host(agent,event_info_host, 1) == CLOSE) 
+            {
+               timeout = 1000; 
+            } 
 			}
 			else 
 			{
@@ -176,6 +193,10 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 			}
 
 		} 
+      else 
+      {
+         clean_up_connections(client, agent); 
+      } 
 	}
 	return EXIT_SUCCESS; 
 }

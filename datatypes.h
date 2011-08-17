@@ -10,7 +10,8 @@ enum defines
    TCP,
    NONE, 
    DATA, 
-   BLOCKING  
+   BLOCKING,
+	CLOSE  
   
 };
 
@@ -28,12 +29,11 @@ enum poll_event_types
 {
    HOST_SIDE_CONNECT=1, 
    AGENT_SIDE_CONNECT, 
-   HOST_SIDE_DATA_IN, 
-   AGENT_SIDE_DATA_IN, 
-   HOST_SIDE_DATA_OUT, 
-   AGENT_SIDE_DATA_OUT 
+   HOST_SIDE_DATA, 
+   AGENT_SIDE_DATA 
 }; 
 
+	
 
 typedef struct controller_struct
 {
@@ -78,6 +78,7 @@ typedef struct packet_hash_struct
 	int id; /* this is the key and also the sequence number */ 
 	int agent_id;  /* agent_sock_buffer[agent_id] == payload data */   
    int host_sent_size; 
+	int size; 
 	uint8_t serialized_data[MAX_BUFFER *2]; 
 	Packet *packet;
 	UT_hash_handle hh; 
@@ -91,6 +92,13 @@ typedef struct serialized_data_struct
    int host_sent_size; 
 } serialized_data_t; 
 
+
+
+#define OFF 0
+#define IN 1 
+#define OUT 2
+#define INAndOut 3
+
 typedef struct client_struct 
 {
 	struct packet_hash_struct *buffered_packet_table; 
@@ -103,17 +111,15 @@ typedef struct client_struct
    int client_event_pool; 
 	int event_poll_out_agent; 
 	int event_poll_out_host; 
-   struct event_info_struct host_side_event_info_in;  
-   struct event_info_struct *agent_side_event_info_in;  
-   struct event_info_struct host_side_event_info_out;  
-   struct event_info_struct *agent_side_event_info_out;  
+   struct event_info_struct host_side_event_info;  
+   struct event_info_struct *agent_side_event_info;  
    struct epoll_event event; 
    int host_sock; 
    int *agent_sock; 
    struct serialized_data_struct * packet; 
-
+	char *agent_fd_poll; 
+	char host_fd_poll; 
 } client_t; 
-
 
 
 typedef struct discovery_struct 
