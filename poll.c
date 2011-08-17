@@ -156,6 +156,11 @@ int poll_data_transfer(agent_t *agent, client_t * client)
                   timeout = 1000; 
                }  
 				}
+				else 
+				{
+					/* All parallel socks are full.  FIX ME*/
+			
+				}
 			}
 			else if(event_info_host->type == AGENT_SIDE_DATA && event.events & EPOLLOUT)
 			{
@@ -171,7 +176,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 
 			else if (event_info_host->type == AGENT_SIDE_DATA && event.events & EPOLLIN)
 			{
-		//		printf("c %d\n",event_info_host->agent_id); 
+	//		printf("c %d\n",event_info_host->agent_id); 
 				if(read_agent_send_host(agent, event_info_host) == CLOSE)
             {
                timeout = 1000; 

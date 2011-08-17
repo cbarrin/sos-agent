@@ -595,13 +595,13 @@ printf("%d\n", event_host->client->host_fd_poll);
       size +=sizeof(size);  
       event_host->client->packet[event_agent->agent_id].host_packet_size =  size; 
       size_count = 0; 
-      printf("%d\n", size); 
+ //     printf("%d\n", size); 
    } 
    else 
    {
       size_count = event_host->client->packet[event_agent->agent_id].host_sent_size; 
       size = event_host->client->packet[event_agent->agent_id].host_packet_size; 
-		printf("ADDED %d\n", event_agent->agent_id); 
+//		printf("ADDED %d\n", event_agent->agent_id); 
 
       /* we want to remove POLLOUT */ 
       if(event_host->client->agent_fd_poll[event_agent->agent_id] == INAndOut) 
@@ -650,7 +650,7 @@ printf("%d\n", event_host->client->host_fd_poll);
             event_host->client->packet[event_agent->agent_id].host_packet_size = size;               
             
 
-				printf("Aremoved %d\n", event_agent->agent_id); 
+				//printf("Aremoved %d\n", event_agent->agent_id); 
 
 	         event_host->client->event.data.ptr = &event_host->client->agent_side_event_info[event_agent->agent_id]; 
 
@@ -765,16 +765,16 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
          }
 		   if(size_count == sizeof(n_size))
 		   {
-            printf("break\n"); 
+            //printf("break\n"); 
 			   break; 
 		   }
 	   }
 	   packet_size = ntohl(n_size); 
-      PACKET[event->agent_id].size = size; 
+      PACKET[event->agent_id].size = packet_size; 
 
 	   if(agent->options.verbose_level)
 	   {
-   		printf("size: %d\n", packet_size ); 
+   		//printf("size: %d\n", packet_size ); 
 	   }
 
 	   if(packet_size > sizeof(PACKET[event->agent_id].serialized_data))  /* FIX ME */
@@ -786,6 +786,7 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
    }
    else 
    {
+      //printf("HERE\n"); 
       packet_size = PACKET[event->agent_id].size; 
       size_count = PACKET[event->agent_id].host_sent_size;  
    }
@@ -796,7 +797,7 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 		{
          if(errno == EAGAIN)
          {
-            printf("waiting on data!!!\n"); 
+//            printf("waiting on data!!! %d size=%d agent %d\n", size_count, packet_size, event->agent_id); 
             PACKET[event->agent_id].host_sent_size = size_count; 
             return EXIT_SUCCESS; 
          }
@@ -847,17 +848,17 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 
 
    agent_id = event->agent_id; 
-   printf("got %d--- %d\n", PACKET[agent_id].packet->seq_num, event->client->recv_seq); 
+   //printf("got %d--- %d\n", PACKET[agent_id].packet->seq_num, event->client->recv_seq); 
    if(event->client->recv_seq == PACKET[agent_id].packet->seq_num) 
    {
-      printf("send_data_host\n"); 
+      //printf("send_data_host\n"); 
 //      exit(1); 
 		send_data_host(agent, event, 0); 
    }
    else 
    { 
    
-   printf("totototo\n"); 
+   //printf("totototo\n"); 
 //		printf("DEL! %d\n", event->fd); 
 //      printf("%d =!= %d \n",  event->client->recv_seq, PACKET[agent_id].packet->seq_num) ; 
 
@@ -878,7 +879,7 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
       }
       else if(event->client->agent_fd_poll[agent_id] == IN)
       {
-         printf("HERER %d\n", agent_id); 
+         //printf("HERER %d\n", agent_id); 
          if(epoll_ctl(event->client->client_event_pool, EPOLL_CTL_DEL,  
             event->fd, NULL))
          {
@@ -943,11 +944,6 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 	{
 		while(1) 
 		{
-         char temp[1000]; 
-         memset(temp, 0, sizeof(temp)); 
-         printf("%d\n", PACKET[agent_id].packet->payload.len); 
-         memcpy(temp, PACKET[agent_id].packet->payload.data,  PACKET[agent_id].packet->payload.len); 
-         printf("sending...%s\n",temp); 
 //         size = send(event->client->host_sock, temp, strlen(temp), 0); 
 			size = send(event->client->host_sock,(uint8_t *) PACKET[agent_id].packet->payload.data + size_count,  
      			PACKET[agent_id].packet->payload.len - size_count, 0);  
@@ -1032,11 +1028,11 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 			}
 			if(size_count == PACKET[agent_id].packet->payload.len)
 			{
-            printf("%s %d\n", PACKET[agent_id].packet->payload.data, (int)PACKET[agent_id].packet->payload.len); 
+            //printf("%s %d\n", PACKET[agent_id].packet->payload.data, (int)PACKET[agent_id].packet->payload.len); 
             PACKET[agent_id].size = 0; 
 				event->client->recv_seq++; 
          
-            printf("sent: %d looking for %d\n",PACKET[agent_id].packet->seq_num, event->client->recv_seq); 
+            //printf("sent: %d looking for %d\n",PACKET[agent_id].packet->seq_num, event->client->recv_seq); 
             if(!event->client->agent_fd_poll[agent_id]&IN)
             {
 	         	event->client->event.data.ptr = &event->client->agent_side_event_info[agent_id]; 
@@ -1078,7 +1074,7 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
       if(send_packet != NULL)  
       {
         	agent_id = send_packet->agent_id;  
-      	printf("Found %d fd=%d id=%d\n ", event->client->recv_seq, event->client->agent_sock[send_packet->agent_id], agent_id); 
+//      	printf("Found %d fd=%d id=%d\n ", event->client->recv_seq, event->client->agent_sock[send_packet->agent_id], agent_id); 
         	HASH_DEL(event->client->buffered_packet_table, send_packet); 
 			size_count = 0; 
          
