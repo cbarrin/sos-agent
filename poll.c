@@ -126,9 +126,9 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 
 	while(1) 
 	{
-		printf("STUCK?\n"); 
+//		printf("STUCK?\n"); 
 		n_events = epoll_wait(client->client_event_pool, &event, 1, timeout); 
-		printf("not STUCK?\n"); 
+//		printf("not STUCK?\n"); 
 
 		if(n_events < 0) 
 		{
@@ -171,7 +171,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 
 			else if (event_info_host->type == AGENT_SIDE_DATA && event.events & EPOLLIN)
 			{
-				printf("c %d\n",event_info_host->agent_id); 
+		//		printf("c %d\n",event_info_host->agent_id); 
 				if(read_agent_send_host(agent, event_info_host) == CLOSE)
             {
                timeout = 1000; 

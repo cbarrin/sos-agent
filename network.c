@@ -84,7 +84,7 @@ int create_listen_sockets(agent_t *agent)
 
 
 	agent->listen_fds.agent_listen_sock = 
-		malloc(sizeof(int) * agent->options.num_parallel_connections); 
+		calloc(sizeof(int) , agent->options.num_parallel_connections); 
 
 	if(agent->listen_fds.agent_listen_sock == NULL)
 	{
@@ -486,17 +486,17 @@ client_t * init_new_client(agent_t *agent )
 { 
    int i; 
 	client_t *new_client; 	
-	new_client = malloc(sizeof(client_t)); 
+	new_client = calloc(sizeof(client_t),1); 
    new_client->buffered_packet_table = NULL; 
 
-	new_client->agent_sock = malloc(sizeof(int) * agent->options.num_parallel_connections); 
-	new_client->agent_side_event_info = malloc(sizeof(struct event_info_struct) *agent->options.num_parallel_connections); 
+	new_client->agent_sock = calloc(sizeof(int) , agent->options.num_parallel_connections); 
+	new_client->agent_side_event_info = calloc(sizeof(struct event_info_struct) ,agent->options.num_parallel_connections); 
    new_client->last_fd_sent = 0; 
    new_client->send_seq = 0; 
    new_client->recv_seq = 0; 
-   new_client->buffered_packet = malloc(sizeof(packet_hash_t) * agent->options.num_parallel_connections); 
-   new_client->packet =  malloc(sizeof(serialized_data_t) *agent->options.num_parallel_connections);  
-   new_client->agent_fd_poll = malloc(sizeof(char) * agent->options.num_parallel_connections); 
+   new_client->buffered_packet = calloc(sizeof(packet_hash_t) , agent->options.num_parallel_connections); 
+   new_client->packet =  calloc(sizeof(serialized_data_t) ,agent->options.num_parallel_connections);  
+   new_client->agent_fd_poll = calloc(sizeof(char) , agent->options.num_parallel_connections); 
 
 	if(new_client == NULL || 
       new_client->agent_sock == NULL ||  
@@ -545,6 +545,9 @@ int serialize_packet(Packet *packet, event_info_t *event, uint8_t *payload, size
 
 int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t *event_agent)
 {
+
+printf("%d\n", event_host->client->host_fd_poll); 
+
 	int size, ret; 
 	uint32_t n_size=0; 
    int size_count; 
@@ -579,7 +582,7 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 
          return CLOSE; 
 	   }
-
+      printf("[%s]\n", buf); 
 	   serialize_packet(&packet, event_host, buf, (size_t)size, 
          (uint8_t *)&event_host->client->packet[event_agent->agent_id].serialized_data[sizeof(size)]); 
 
@@ -592,6 +595,7 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
       size +=sizeof(size);  
       event_host->client->packet[event_agent->agent_id].host_packet_size =  size; 
       size_count = 0; 
+      printf("%d\n", size); 
    } 
    else 
    {
@@ -635,7 +639,7 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
    while(1)  
    {
       ret = send(event_host->client->agent_sock[event_agent->agent_id],
-         (uint8_t *)&event_host->client->packet[event_agent->agent_id].serialized_data + size_count, size - size_count, 0); 
+         event_host->client->packet[event_agent->agent_id].serialized_data + size_count, size - size_count, 0); 
 		
       if(ret == -1) 
 		{
@@ -715,10 +719,8 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 	int size_count = 0; 
 	uint32_t packet_size; 
    int agent_id;  
-   printf("HERE222\n"); 
    if(!PACKET[event->agent_id].size)
    {
-     printf("HERE11\n"); 
 	   while(1) { 
 		   if(( size = recv(event->fd, (uint8_t *)&n_size +size_count, sizeof(n_size) - size_count, 0)) == -1)  
 		   { 
@@ -745,7 +747,7 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 		      size_count +=size; 
          }
          if(size == 0) { 
-            printf("CLOSIING@!!!!!!!!!!!!!!!!!! %d %d\n", event->agent_id, event->fd); 
+            //printf("CLOSIING@!!!!!!!!!!!!!!!!!! %d %d\n", event->agent_id, event->fd); 
             // remove epoll event 
            // if(event->client->agent_fd_poll[event->agent_id] != OFF) 
             //{
@@ -941,7 +943,13 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 	{
 		while(1) 
 		{
-			size = send(event->client->host_sock,(uint8_t *) &PACKET[agent_id].packet->payload.data + size_count,  
+         char temp[1000]; 
+         memset(temp, 0, sizeof(temp)); 
+         printf("%d\n", PACKET[agent_id].packet->payload.len); 
+         memcpy(temp, PACKET[agent_id].packet->payload.data,  PACKET[agent_id].packet->payload.len); 
+         printf("sending...%s\n",temp); 
+//         size = send(event->client->host_sock, temp, strlen(temp), 0); 
+			size = send(event->client->host_sock,(uint8_t *) PACKET[agent_id].packet->payload.data + size_count,  
      			PACKET[agent_id].packet->payload.len - size_count, 0);  
 			if(size == -1) 
 			{ 
@@ -1024,6 +1032,7 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 			}
 			if(size_count == PACKET[agent_id].packet->payload.len)
 			{
+            printf("%s %d\n", PACKET[agent_id].packet->payload.data, (int)PACKET[agent_id].packet->payload.len); 
             PACKET[agent_id].size = 0; 
 				event->client->recv_seq++; 
          
