@@ -150,7 +150,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 				if(n_events) 
 				{
 					event_info_t *event_info_agent = (event_info_t *)event.data.ptr; 
-					printf("A\n"); 
+	//				printf("A\n"); 
 					if(read_host_send_agent(agent, event_info_host, event_info_agent) == CLOSE) 
                {
                   timeout = 1000; 
@@ -166,7 +166,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 			{
 				if(event_info_host->client->packet[event_info_host->agent_id].host_packet_size == 0) 
 				{ printf("ASSERT!!! %d \n",event_info_host->agent_id); exit(1); } 
-					printf("b\n"); 
+	//				printf("b\n"); 
 				if(read_host_send_agent(agent, &event_info_host->client->host_side_event_info, event_info_host)== CLOSE)
             {
                timeout = 1000; 
@@ -185,7 +185,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 			}
 			else if(event_info_host->type == HOST_SIDE_DATA && event.events & EPOLLOUT )
 			{
-				printf("d %d\n", event_info_host->agent_id); 
+	//			printf("d %d\n", event_info_host->agent_id); 
 				if(send_data_host(agent,event_info_host, 1) == CLOSE) 
             {
                timeout = 1000; 

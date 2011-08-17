@@ -546,7 +546,6 @@ int serialize_packet(Packet *packet, event_info_t *event, uint8_t *payload, size
 int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t *event_agent)
 {
 
-printf("%d\n", event_host->client->host_fd_poll); 
 
 	int size, ret; 
 	uint32_t n_size=0; 
@@ -582,7 +581,6 @@ printf("%d\n", event_host->client->host_fd_poll);
 
          return CLOSE; 
 	   }
-      printf("[%s]\n", buf); 
 	   serialize_packet(&packet, event_host, buf, (size_t)size, 
          (uint8_t *)&event_host->client->packet[event_agent->agent_id].serialized_data[sizeof(size)]); 
 
@@ -953,7 +951,7 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
          	{	
 					PACKET[agent_id].host_sent_size = size_count; 	
                if(size_count == 0) printf("WTF!\n"); 
-					printf("removed %d [%d]\n", event->agent_id, event->client->host_fd_poll); 
+//					printf("removed %d [%d]\n", event->agent_id, event->client->host_fd_poll); 
                /* Got blocked writing on host_sock need to now poll out! */ 
 
                event->client->host_side_event_info.agent_id = agent_id; 
