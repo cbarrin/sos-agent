@@ -559,7 +559,7 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 	   if(( size = recv(event_host->fd, buf, sizeof(buf), 0)) == -1) 
 	   {
 		   if(errno == EAGAIN) { 
-				printf("Eagain??\n"); 
+				printf("Eagain?? %d\n", event_agent->agent_id); 
 				return EXIT_SUCCESS; 
 			} 
 		   perror("recv: read_host_send_agent"); 
@@ -911,6 +911,7 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 	{
       if(event->client->host_fd_poll == INAndOut)
       {
+         printf("HERE!!!!!\n"); 
 		   event->client->event.events = EPOLLIN; 
 		   event->client->event.data.ptr = &event->client->host_side_event_info; 
 
@@ -952,6 +953,7 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 			{ 
 				if(errno == EAGAIN) 
          	{	
+               printf("WAS IT ME?  %d\n", event->client->host_fd_poll); 
 					PACKET[agent_id].host_sent_size = size_count; 	
                if(size_count == 0) printf("WTF!\n"); 
 //					printf("removed %d [%d]\n", event->agent_id, event->client->host_fd_poll); 
@@ -1015,6 +1017,7 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
                   event->client->agent_fd_poll[agent_id] = OFF;
                }
                else { printf("kljdf\n"); exit(1); }
+               printf("WAS IT ME?  %d\n", event->client->host_fd_poll); 
 					return EXIT_FAILURE; 
             }
 				else 
