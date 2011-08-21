@@ -125,7 +125,8 @@ int all_agents_socks_full(agent_t *agent, client_t *client)
 		if(epoll_ctl(client->client_event_pool, EPOLL_CTL_MOD, 	
 			client->host_sock, &client->event))
 		{
-			perror("bad"); 
+			perror(""); 
+		   printf("%s %d\n", __FILE__, __LINE__); 
 			exit(1); 
 		}
 		client->host_fd_poll = OUT; 
@@ -135,14 +136,15 @@ int all_agents_socks_full(agent_t *agent, client_t *client)
 		if(epoll_ctl(client->client_event_pool, EPOLL_CTL_DEL, 
 			client->host_sock, NULL))
 		{
-			perror("bad: del"); 	
+			perror(""); 
+		   printf("%s %d\n", __FILE__, __LINE__); 
 			exit(1); 
 		} 	
 		client->host_fd_poll = OFF; 
 	} 
 	else 
 	{ 
-		printf("unknown bad 34\n"); 	
+		printf("unknown bad %s %d\n", __FILE__, __LINE__); 	
 		exit(1); 
 	} 
 
@@ -187,7 +189,6 @@ int all_agents_socks_full(agent_t *agent, client_t *client)
 }
 int not_all_agent_socks_full(agent_t *agent, client_t * client) 
 {
-
 
 	int i; 
 	/* we want to add poll in on host_sock */ 
@@ -267,36 +268,38 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 
 	int n_events; 
 	int timeout = -1; 
-	struct epoll_event event; 
+	struct epoll_event event;
 
 
 	while(1) 
 	{
-//		printf("STUCK?\n"); 
 		n_events = epoll_wait(client->client_event_pool, &event, 1, timeout); 
-//		printf("not STUCK?\n"); 
-
 		if(n_events < 0) 
 		{
-			perror("epoll_wait (client_event_poll)"); 
-			exit(1); 
+			perror(""); 
+		   printf("%s %d\n", __FILE__, __LINE__); 
+		   exit(1); 
 		}
      
-		else if(n_events) { 
+      if(n_events) 
+      { 
 			event_info_t *event_info_host = (event_info_t *)event.data.ptr; 
 			
 			if(event_info_host->type == HOST_SIDE_DATA && event.events & EPOLLIN)
 			{
-				n_events = epoll_wait(client->event_poll_out_agent, &event, 1, 0); 
+				n_events= epoll_wait(client->event_poll_out_agent, &event, 1, 0); 
 				if(n_events < 0) 
 				{ 
-					perror( "epoll_wait"); 
+					perror(""); 
+					printf("%s %d\n", __FILE__, __LINE__); 
 					exit(1); 
 				} 
 				if(n_events) 
 				{
 					event_info_t *event_info_agent = (event_info_t *)event.data.ptr; 
-//					printf("A\n"); 
+#ifdef DEBUG
+               printf("A %d\n",  event_info_agent->agent_id); 
+#endif 
 					if(read_host_send_agent(agent, event_info_host, event_info_agent) == CLOSE) 
                {
                   timeout = 1000; 
@@ -305,42 +308,25 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 				else 
 				{
 					/* All parallel socks are full.  FIX ME*/
+#ifdef DEBUG
 					printf("BAD!!! %d\n", event_info_host->client->host_fd_poll); 
+#endif
 					all_agents_socks_full(agent, event_info_host->client); 
+#ifdef DEBUG
 					printf("AFTER BAD!!! %d\n", event_info_host->client->host_fd_poll); 
+#endif
 			
 				}
 			}
 			else if(event_info_host->type == AGENT_SIDE_DATA && event.events & EPOLLOUT)
 			{
-//				if(event_info_host->client->packet[event_info_host->agent_id].host_packet_size == 0) 
-//				{ printf("ASSERT!!! %d \n",event_info_host->agent_id); exit(1); } 
-//				printf("b \n" ); 
 				if(event_info_host->client->packet[event_info_host->agent_id].host_packet_size == 0)
 				{
 					/* parallel socket unblocked */ 	
-					printf("FREED SOMETHING!\n"); 
+#ifdef DEBUG
+               printf("Something freed %d perm=%d\n", event_info_host->agent_id, event_info_host->client->host_fd_poll); 
+#endif
 					not_all_agent_socks_full(agent, event_info_host->client); 
-/*					n_events = epoll_wait(client->event_poll_out_agent, &event, 1, 0); 
-					if(n_events <0)
-					{
-						perror("KJ"); 
-						exit(1); 
-					}
-					if(!n_events) 
-					{
-						printf("THIS SHOULD NOT HAPPEN!!!\n"); exit(1); 
-					}
-					else 
-					{
-						event_info_t *event_info_agent = (event_info_t *)event.data.ptr; 
-						printf("NOT BAD %d\n", event_info_agent->agent_id); 
-						if(read_host_send_agent(agent, event_info_host, event_info_agent) == CLOSE) 
-               	{
-                  	timeout = 1000; 
-               	}  
-					} 
-*/ 
 				} 
  
 				if(read_host_send_agent(agent, &event_info_host->client->host_side_event_info, event_info_host)== CLOSE)
@@ -350,7 +336,9 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 			}
 			else if (event_info_host->type == AGENT_SIDE_DATA && event.events & EPOLLIN)
 			{
-			printf("c %d\n",event_info_host->agent_id); 
+#ifdef DEBUG
+			   printf("c %d\n",event_info_host->agent_id); 
+#endif
 				if(read_agent_send_host(agent, event_info_host) == CLOSE)
             {
                timeout = 1000; 
@@ -359,7 +347,9 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 			}
 			else if(event_info_host->type == HOST_SIDE_DATA && event.events & EPOLLOUT )
 			{
+#ifdef DEBUG
 				printf("d %d\n", event_info_host->agent_id); 
+#endif
 				if(send_data_host(agent,event_info_host, 1) == CLOSE) 
             {
                timeout = 1000; 
@@ -372,7 +362,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 			}
 
 		} 
-      else 
+      else if(!n_events) 
       {
          clean_up_connections(client, agent); 
       } 
