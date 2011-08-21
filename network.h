@@ -12,3 +12,5 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 int read_agent_send_host(agent_t * agent, event_info_t *event); 
 int clean_up_connections(client_t *client, agent_t *agent);      
 int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd) ; 
+int close_listener_sockets(agent_t *agent); 
+

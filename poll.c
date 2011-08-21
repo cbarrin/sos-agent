@@ -30,8 +30,6 @@
 
 
 
-
-
 int poll_loop(agent_t *agent) 
 {
 	int n_events; 
@@ -87,6 +85,7 @@ int poll_loop(agent_t *agent)
             { 
 					printf("NEW client agent side connect\n"); 
 			      new_client = handle_agent_side_connect(agent); 
+               close_listener_sockets(agent); 
 					poll_data_transfer(agent, new_client); 
             }
          }

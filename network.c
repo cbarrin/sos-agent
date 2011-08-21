@@ -30,6 +30,20 @@
 
 
 
+int close_listener_sockets(agent_t *agent)
+{
+	int i; 
+	close(agent->listen_fds.host_listen_sock); 
+	for(i = 0; i < agent->options.num_parallel_connections; i++)
+	{
+		close(agent->listen_fds.agent_listen_sock[i]); 
+	}
+	free(agent->listen_fds.agent_listen_sock); 
+
+	return EXIT_SUCCESS; 
+}
+
+
 int init_agent(agent_t *agent) 
 {
 	init_poll(agent); 
@@ -952,7 +966,11 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 				if(errno == EAGAIN) 
          	{	
 					PACKET[agent_id].host_sent_size = size_count; 	
-               if(size_count == 0) printf("WTF!\n"); 
+               if(size_count == 0 && remove_fd)
+               {
+                printf("WTF!\n"); 
+                exit(1); 
+               } 
 //					printf("removed %d [%d]\n", event->agent_id, event->client->host_fd_poll); 
                /* Got blocked writing on host_sock need to now poll out! */ 
 
