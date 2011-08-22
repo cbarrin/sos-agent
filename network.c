@@ -1098,6 +1098,7 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
          
          if(!event->client->agent_fd_poll[agent_id]&IN) 
          {
+       	   event->client->event.data.ptr = &event->client->agent_side_event_info[agent_id]; 
             if(event->client->agent_fd_poll[agent_id] == OUT) 
             {
                event->client->event.events = EPOLLIN | EPOLLOUT; 
@@ -1113,7 +1114,6 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
             }
             else if(event->client->agent_fd_poll[agent_id] == OFF) 
             {
-       	      event->client->event.data.ptr = &event->client->agent_side_event_info[agent_id]; 
 	            event->client->event.events = EPOLLIN; 
       	      if(epoll_ctl(event->client->client_event_pool, EPOLL_CTL_ADD,  
        	         event->client->agent_sock[send_packet->agent_id], 
