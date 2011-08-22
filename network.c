@@ -1143,7 +1143,6 @@ int clean_up_connections(client_t *client, agent_t *agent)
    {
       close(client->agent_sock[i]); 
    }
-   free(client->buffered_packet_table);  
    free(client->buffered_packet);  
    free(client->agent_side_event_info); 
    free(client->agent_sock); 
