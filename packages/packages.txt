@@ -18,6 +18,7 @@ yum-utils-1.1.26-1.fc12.noarch
 nspr-4.8.6-1.fc12.i686
 libstdc++-devel-4.4.4-10.fc12.i686
 nss-util-3.12.7-2.fc12.i686
+fedora-logos-12.0.3-2.fc12.noarch
 readline-6.0-3.fc12.i686
 sqlite-3.6.20-1.fc12.i686
 file-libs-5.03-14.fc12.i686
