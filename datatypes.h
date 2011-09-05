@@ -57,6 +57,14 @@ typedef  struct options_struct
    char bind_ip[INET6_ADDRSTRLEN]; 
 }options_t; 
 
+typedef struct event_info_struct { 
+   char type; 
+   int fd; 
+	int agent_id; 
+   struct client_struct *client; 
+} event_info_t; 
+
+
 
 typedef struct listen_fds_struct
 {
@@ -64,14 +72,9 @@ typedef struct listen_fds_struct
    struct epoll_event event_host;         /* epoll event for client side         */  
    int *agent_listen_sock;                /* agent parallel connection to agent  */  
    struct epoll_event event_agent;        /* epoll event for agent side          */  
+   struct event_info_struct *agent_side_listen_event;  
+   struct event_info_struct host_side_listen_event;  
 }listen_fds_t; 
-
-typedef struct event_info_struct { 
-   char type; 
-   int fd; 
-	int agent_id; 
-   struct client_struct *client; 
-} event_info_t; 
 
 typedef struct packet_hash_struct 
 {
@@ -119,6 +122,7 @@ typedef struct client_struct
    struct serialized_data_struct * packet; 
 	char *agent_fd_poll; 
 	char host_fd_poll; 
+   int num_parallel_connections; 
 } client_t; 
 
 
