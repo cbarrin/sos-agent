@@ -85,10 +85,10 @@ int poll_loop(agent_t *agent)
 						poll_data_transfer(agent, iter_hash->client); 
             	}
 					//parent 
-					//free old client  FIX.ME 
-					//remove hash entry 
-					HASH_DEL(agent->clients_hashes, iter_hash);  	
-	            clean_up_connections(iter_hash->client); 
+                close_all_data_sockets(agent, iter_hash->client); 
+                free_client(agent, iter_hash->client);  
+					 HASH_DEL(agent->clients_hashes, iter_hash);  	
+
 				} 
 			}
 		}
@@ -393,7 +393,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 		} 
       else if(!n_events) 
       {
-         
+         free_client(agent, client);         
          clean_up_connections(client); 
          printf("All sockets closed!\n"); 
          exit(1); 

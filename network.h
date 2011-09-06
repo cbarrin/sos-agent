@@ -19,3 +19,5 @@ int agent_connected_event(agent_t *agent, event_info_t *event);
 int get_uuid_and_confirm_client(agent_t *agent, int fd) ; 
 int clean_up_unconnected_parallel_sockets(agent_t *agent, client_t *client) ; 
 int handle_host_connected(agent_t *agent, client_t * client) ;        
+int free_client(agent_t *agent, client_t * client) ; 
+int close_all_data_sockets(agent_t * agent, client_t * client); 

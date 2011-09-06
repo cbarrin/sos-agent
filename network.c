@@ -109,19 +109,6 @@ int configure_poll(client_t * client)
 }
 
 
-int close_listener_sockets(agent_t *agent)
-{
-	int i; 
-	close(agent->listen_fds.host_listen_sock); 
-	for(i = 0; i < agent->options.num_parallel_connections; i++)
-	{
-		close(agent->listen_fds.agent_listen_sock[i]); 
-	}
-	free(agent->listen_fds.agent_listen_sock); 
-
-	return EXIT_SUCCESS; 
-}
-
 
 int init_agent(agent_t *agent) 
 {
@@ -319,7 +306,7 @@ void *get_in_addr(struct sockaddr *sa)
  *
  */
 
-client_t *  handle_host_side_connect(agent_t *agent) 
+client_t * handle_host_side_connect(agent_t *agent) 
 {
 
  	client_t *new_client = init_new_client(agent, NULL); 
@@ -343,7 +330,6 @@ int accept_host_side(agent_t *agent, client_t *new_client)
 {
 	socklen_t sin_size; 
 	struct sockaddr_storage their_addr; 
-	struct epoll_event event; 
 
 	sin_size = sizeof(their_addr); 
 
@@ -370,7 +356,7 @@ int accept_host_side(agent_t *agent, client_t *new_client)
 	   exit(1); 
 	}
 */ 
-   new_client->host_fd_poll = ON; 
+   new_client->host_fd_poll = IN; 
 
 	setnonblocking(new_client->host_sock); 
 
@@ -449,21 +435,28 @@ int handle_host_connected(agent_t *agent, client_t * client)
 	if(!optval)
 	{
       client->host_fd_poll = IN; 
+
+		if( epoll_ctl(agent->event_pool, EPOLL_CTL_DEL, 
+	   	client->host_sock, NULL)) 
+		{ 
+				printf("%d\n", client->host_sock); 
+	   		perror("");
+	   		printf("%s %d\n", __FILE__, __LINE__); 
+	   		exit(1); 
+   	}
    } 
    else 
    {
-      perror(""); 
       printf("Failed to connect to host\n"); 
-   } 
-
-
-	if( epoll_ctl(agent->event_pool, EPOLL_CTL_DEL, 
-	   client->host_sock, NULL)) 
-	{ 
-	   perror("");
+      perror(""); 
 	   printf("%s %d\n", __FILE__, __LINE__); 
-	   exit(1); 
+//		exit(1); 
    } 
+
+	 
+
+
+
    return EXIT_SUCCESS; 	
 }
 
@@ -514,6 +507,11 @@ int connect_host_side(agent_t *agent, client_t *new_client)
    if(connect(new_client->host_sock, 
       (struct sockaddr *) &servaddr, sizeof(servaddr)) == -1)
    {
+	//	if(errno != 115) { 
+			perror(""); 
+		   printf("%s %d\n", __FILE__, __LINE__); 
+	//		exit(1); 
+	//	} 
    }   
 
 
@@ -648,19 +646,12 @@ int get_uuid_and_confirm_client(agent_t *agent, int fd)
    printf("%d %d \n", fd, agent->agent_fd_pool[fd]); 
    get_uuid(agent->agent_fd_pool[fd], &uuid); 
    
-
-
    
    HASH_FIND_INT(agent->clients_hashes, uuid, client_hash); 
 
    if(client_hash == NULL) 
    {
  	   new_client = init_new_client(agent, &uuid); 
-/*
-      char out[37]; 
-      uuid_unparse(uuid, out); 
-      printf("%s\n", out); 
-*/ 
       new_client->agent_sock[new_client->num_parallel_connections] = 
          agent->agent_fd_pool[fd]; 
       new_client->agent_fd_poll[new_client->num_parallel_connections] = IN; 
@@ -753,7 +744,6 @@ int clean_up_unconnected_parallel_sockets(agent_t *agent, client_t *client)
 	} 
 	return EXIT_SUCCESS; 
 }
-
 
 client_t * init_new_client(agent_t *agent, uuid_t * uuid) 
 { 
@@ -1028,7 +1018,8 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 			   } 
 			   else 
 			   { 
-				   perror("recv: n_size"); 	
+					perror(""); 
+					printf("%s %d\n", __FILE__, __LINE__); 
 				   exit(1); 
 			   }
 		   }
@@ -1427,6 +1418,8 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 	}
 }
 #undef PACKET 
+
+
 int clean_up_connections(client_t *client)
 {
    int i; 
@@ -1437,4 +1430,40 @@ int clean_up_connections(client_t *client)
    }
    return EXIT_SUCCESS; 
 }
+
+int close_listener_sockets(agent_t *agent)
+{
+	int i; 
+	close(agent->listen_fds.host_listen_sock); 
+	for(i = 0; i < agent->options.num_parallel_connections; i++)
+	{
+		close(agent->listen_fds.agent_listen_sock[i]); 
+	}
+	free(agent->listen_fds.agent_listen_sock); 
+
+	return EXIT_SUCCESS; 
+}
+
+
+int close_all_data_sockets(agent_t * agent, client_t * client)
+{
+	int i; 
+   close(client->host_sock); 
+	for(i = 0; i < agent->options.num_parallel_connections; i++)
+	{
+		close(client->agent_sock[i]); 
+	}
+	return EXIT_SUCCESS; 
+}
+
+int free_client(agent_t *agent, client_t * client) 
+{
+	free(client->agent_sock); 
+	free(client->agent_side_event_info); 
+	free(client->buffered_packet); 
+	free(client->packet); 
+	free(client->agent_fd_poll); 
+	return EXIT_SUCCESS; 
+}
+
 
