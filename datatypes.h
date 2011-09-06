@@ -29,6 +29,9 @@ enum poll_event_types
 {
    HOST_SIDE_CONNECT=1, 
    AGENT_SIDE_CONNECT, 
+   HOST_CONNECTED, 
+   AGENT_CONNECTED, 
+   AGENT_CONNECTED_UUID, 
    HOST_SIDE_DATA, 
    AGENT_SIDE_DATA 
 }; 
@@ -87,6 +90,13 @@ typedef struct packet_hash_struct
 	UT_hash_handle hh; 
 }packet_hash_t; 
 
+typedef struct client_hash_struct
+{
+   uuid_t id;  
+   struct timeval accept_start, accept_end; 
+   struct client_struct *client; 
+   UT_hash_handle hh; /* makes this structure hashable */
+}  client_hash_t; 
 
 typedef struct serialized_data_struct 
 {
@@ -101,12 +111,13 @@ typedef struct serialized_data_struct
 #define IN 1 
 #define OUT 2
 #define INAndOut 3
+#define EMPTY -1
 
 typedef struct client_struct 
 {
+   struct client_hash_struct client_hash; 
 	struct packet_hash_struct *buffered_packet_table; 
 	struct packet_hash_struct *buffered_packet; 
-
    int send_seq; 
    int recv_seq; 
 
@@ -135,10 +146,13 @@ typedef struct discovery_struct
 typedef struct agent_struct 
 { 
    int event_pool; 
+   struct client_hash_struct *clients_hashes; 
    struct options_struct options; 
    struct listen_fds_struct  listen_fds; 
    struct controller_struct controller; 
    struct discovery_struct discovery; 
    int message_fd[2]; 
+   int agent_fd_pool[MAX_AGENT_CONNECTIONS]; 
+   struct event_info_struct agent_fd_pool_event[MAX_AGENT_CONNECTIONS];  
 
 }agent_t; 

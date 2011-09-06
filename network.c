@@ -18,6 +18,8 @@
 #include <fcntl.h>
 #include <sys/epoll.h>
 #include <sys/time.h>
+#include <uuid/uuid.h>
+
 
 #include "uthash.h"
 #include "packet.pb-c.h"
@@ -134,7 +136,15 @@ int init_agent(agent_t *agent)
 
 int init_poll(agent_t *agent)
 {
+   int count; 
 	agent->event_pool = epoll_create(1); 
+   agent->clients_hashes = NULL; 
+   
+   for(count = 0; count < MAX_AGENT_CONNECTIONS; count++) 
+   {
+      agent->agent_fd_pool[count] = EMPTY; 
+
+   } 
    
 	if(agent->event_pool < 0)
 	{
@@ -309,9 +319,10 @@ void *get_in_addr(struct sockaddr *sa)
  *
  */
 
-client_t *  handle_host_side_connect(agent_t *agent, client_t *new_client) 
+client_t *  handle_host_side_connect(agent_t *agent) 
 {
 
+ 	client_t *new_client = init_new_client(agent, NULL); 
 	if(!agent->options.nonOF && new_client != NULL)
 	{
 		get_controller_message(&agent->controller); 
@@ -332,45 +343,135 @@ int accept_host_side(agent_t *agent, client_t *new_client)
 {
 	socklen_t sin_size; 
 	struct sockaddr_storage their_addr; 
+	struct epoll_event event; 
+
 	sin_size = sizeof(their_addr); 
+
 
 	if(( new_client->host_sock = accept(agent->listen_fds.host_listen_sock, 
 		(struct sockaddr *) &their_addr, &sin_size)) == -1)
 	{
-		perror(""); 
-		printf("%s %d\n", __FILE__, __LINE__); 
-		exit(1); 	
+      perror(""); 
+	   printf("%s %d\n", __FILE__, __LINE__); 
+      exit(1); 
 	}
+   
+/*
+	event.events = EPOLLOUT; 
+   event.data.ptr =  &new_client->host_side_event_info; 
+   new_client->host_side_event_info.type = HOST_CONNECTED;  
+	new_client->host_side_event_info.client = new_client; 
+
+	if( epoll_ctl(agent->event_pool, EPOLL_CTL_ADD, 
+	   new_client->host_sock, &event)) 
+	{ 
+	   perror("");
+	   printf("%s %d\n", __FILE__, __LINE__); 
+	   exit(1); 
+	}
+*/ 
+   new_client->host_fd_poll = ON; 
+
 	setnonblocking(new_client->host_sock); 
+
 
 	return EXIT_SUCCESS; 
 }
 
+int find_empty_agent_sock(agent_t *agent)
+{
+   int count; 
+   for(count = 0; count < MAX_AGENT_CONNECTIONS; count++)   
+   { 
+      if(agent->agent_fd_pool[count] == EMPTY) {
+         return count; 
+      } 
+   } 
+   return EMPTY; 
+}
 
-int accept_agent_side( agent_t *agent, client_t *new_client, int fd) 
+/*
+   accept then add to  agent->event_pool and wait for uuid 
+*/ 
+
+int accept_agent_side( agent_t *agent, event_info_t *event_info) 
 {
    socklen_t sin_size; 
    struct sockaddr_storage their_addr; 
    sin_size = sizeof(their_addr); 
-   if((  new_client->agent_sock[new_client->num_parallel_connections] = 
-		accept(agent->listen_fds.agent_listen_sock[fd], 
+   int index = find_empty_agent_sock(agent); 
+   //static int index = 0; 
+	struct epoll_event event; 
+//   memset(&event, 0, sizeof(event)); 
+
+   if(index < 0) 
+   { 
+      printf("agent sock table full!!!\n"); 
+      exit(1); 
+   } 
+
+   if(( agent->agent_fd_pool[index] = 
+		accept(agent->listen_fds.agent_listen_sock[event_info->fd], 
    	(struct sockaddr *) &their_addr, &sin_size)) == -1)
 	{
 		perror(""); 
 		printf("%s %d\n", __FILE__, __LINE__); 
 		exit(1); 	
    }
-   setnonblocking(new_client->agent_sock[new_client->num_parallel_connections]); 
-	new_client->num_parallel_connections++; 
+
+   setnonblocking(agent->agent_fd_pool[index]); 
+
+	event.events = EPOLLOUT; 
+	event.data.ptr =  &agent->agent_fd_pool_event[index]; 
+	agent->agent_fd_pool_event[index].type =	AGENT_CONNECTED_UUID;  
+	agent->agent_fd_pool_event[index].fd = index; 	
+
+	if( epoll_ctl(agent->event_pool, EPOLL_CTL_ADD, 
+	   agent->agent_fd_pool[index], &event)) 
+	{ 
+	   perror("");
+	   printf("%s %d\n", __FILE__, __LINE__); 
+	   exit(1); 
+	}
+
+//	new_client->num_parallel_connections++; 
 
    return EXIT_SUCCESS; 
 }
 
 
+int handle_host_connected(agent_t *agent, client_t * client) 
+{
+   int optval; 
+	socklen_t val = sizeof(optval); 
+
+	getsockopt(client->host_sock,SOL_SOCKET, SO_ERROR, &optval, &val);   
+	if(!optval)
+	{
+      client->host_fd_poll = IN; 
+   } 
+   else 
+   {
+      perror(""); 
+      printf("Failed to connect to host\n"); 
+   } 
+
+
+	if( epoll_ctl(agent->event_pool, EPOLL_CTL_DEL, 
+	   client->host_sock, NULL)) 
+	{ 
+	   perror("");
+	   printf("%s %d\n", __FILE__, __LINE__); 
+	   exit(1); 
+   } 
+   return EXIT_SUCCESS; 	
+}
+
 int connect_host_side(agent_t *agent, client_t *new_client)
 {
 
    struct sockaddr_in servaddr; 
+	struct epoll_event event; 
 
 	if(!agent->options.nonOF && new_client != NULL)
 	{
@@ -392,19 +493,29 @@ int connect_host_side(agent_t *agent, client_t *new_client)
       printf("connecting to server [%s:%d]\n", agent->controller.send_ip, agent->controller.port); 
    }
 
-   printf("Connect...\n"); 
+   //printf("Connect...\n"); 
 
+   setnonblocking(new_client->host_sock); 
+	event.events = EPOLLOUT; 
+   event.data.ptr =  &new_client->host_side_event_info; 
+   new_client->host_side_event_info.type = HOST_CONNECTED;  
+	new_client->host_side_event_info.client = new_client; 
+
+	if( epoll_ctl(agent->event_pool, EPOLL_CTL_ADD, 
+	   new_client->host_sock, &event)) 
+	{ 
+	   perror("");
+	   printf("%s %d\n", __FILE__, __LINE__); 
+	   exit(1); 
+	}
+
+   new_client->host_fd_poll = OFF; 
 
    if(connect(new_client->host_sock, 
       (struct sockaddr *) &servaddr, sizeof(servaddr)) == -1)
    {
-		perror(""); 
-		printf("%s %d\n", __FILE__, __LINE__); 
-		exit(1); 	
    }   
-   printf("Connected\n"); 
 
-   setnonblocking(new_client->host_sock); 
 
    return EXIT_SUCCESS;   
 }
@@ -413,11 +524,14 @@ int connect_agent_side(agent_t *agent, client_t *new_client)
 {
 	int count; 
 	struct sockaddr_in servaddr; 
-
-	int connect_event_pool; 
 	struct epoll_event event; 
-	int optval; 
-	socklen_t val = sizeof(optval); 
+
+//	event_info_t *client_events = malloc(sizeof(event_info_t) * agent->options.num_parallel_connections); 
+//	if(client_events == NULL) 
+//	{ 
+//		printf("malloc failed\n"); 
+//		exit(1); 
+//	} 
 
 
 	bzero( (void *) &servaddr, sizeof(servaddr) ); 
@@ -425,14 +539,6 @@ int connect_agent_side(agent_t *agent, client_t *new_client)
 	servaddr.sin_addr.s_addr = inet_addr(agent->controller.send_ip);
 
 
-	connect_event_pool = epoll_create(1); 
-
-	if(connect_event_pool < 0)
-	{ 
-		perror("");
-		printf("%s %d\n", __FILE__, __LINE__); 
-		exit(1); 
-	} 
 	
 	for(count = 0; count < agent->options.num_parallel_connections; count++) 
 	{
@@ -447,8 +553,12 @@ int connect_agent_side(agent_t *agent, client_t *new_client)
 			}
 			setnonblocking(new_client->agent_sock[count]); 		
 			event.events = EPOLLOUT; 
-			event.data.ptr = (void *) count; 
-			if( epoll_ctl(connect_event_pool, EPOLL_CTL_ADD, 
+			event.data.ptr =  &new_client->agent_side_event_info[count]; 
+			new_client->agent_side_event_info[count].type =	AGENT_CONNECTED;  
+			new_client->agent_side_event_info[count].fd = count; 	
+			new_client->agent_side_event_info[count].client = new_client; 
+
+			if( epoll_ctl(agent->event_pool, EPOLL_CTL_ADD, 
 				new_client->agent_sock[count], &event)) 
 			{ 
 				perror("");
@@ -467,59 +577,194 @@ int connect_agent_side(agent_t *agent, client_t *new_client)
 		}
 	}
 	new_client->num_parallel_connections = 0; 
-	while( epoll_wait(connect_event_pool, &event, 1, 5000) > 0)
-	{
-		getsockopt(new_client->agent_sock[(int) event.data.ptr],SOL_SOCKET, SO_ERROR, &optval, &val);   
-		if(!optval)
-		{
-  			new_client->num_parallel_connections++; 
-			new_client->agent_fd_poll[(int)event.data.ptr] = IN;  
-		}
-		else 
-		{
-			perror(""); 
-			printf("failed %d\n", (int)event.data.ptr); 
-		}
-		if(epoll_ctl(connect_event_pool, EPOLL_CTL_DEL, 
-			new_client->agent_sock[(int) event.data.ptr], NULL))
-		{
-			perror("");
-			printf("%s %d\n", __FILE__, __LINE__); 
-			exit(1); 
-		}	
-		/* all sockets have been accepted so we can break */ 
-		if(new_client->num_parallel_connections == agent->options.num_parallel_connections) 
-		{ 
-			break; 
-		} 
-	}
-
-	/* do some clean up for sockets that didn't connect */ 
-	for(count = 0; count < agent->options.num_parallel_connections; count++)
-	{ 
-		if(new_client->agent_fd_poll[count] == OFF)
-		{ 
-         printf("Closed %d\n", count); 
-			close(new_client->agent_sock[count]); 
-		} 
-	} 
-
-	
-
-	if(agent->options.verbose_level)
-	{
-		printf("Connections %d  to  [%s]\n", new_client->num_parallel_connections, agent->controller.send_ip); 
-	}
-
 	return EXIT_SUCCESS; 
 }
 
 
-client_t * init_new_client(agent_t *agent ) 
+int send_uuid(int fd, uuid_t uuid)
+{
+   uint8_t sent_bytes=0; 
+   int size; 
+   while(1) 
+   {
+      printf("Senting... \n"); 
+      size = send(fd, uuid + sent_bytes, sizeof(uuid_t)-sent_bytes, 0); 
+      if(size == -1) 
+		{
+         perror("");
+		   if(errno != EAGAIN) 
+         {
+			   perror("");
+			   printf("%s %d\n", __FILE__, __LINE__); 
+			   exit(1); 
+         }
+       }
+       else 
+       {
+         sent_bytes +=size; 
+       } 
+       if(sent_bytes == sizeof(uuid_t)) 
+       {
+           break;
+       }
+   }
+   printf("sent uuid\n"); 
+   return EXIT_SUCCESS; 
+}
+
+int get_uuid(int fd, uuid_t * uuid) 
+{
+   uint8_t recv_bytes=0; 
+   int size; 
+   while(1) 
+   {
+      size = recv(fd, uuid + recv_bytes, sizeof(uuid_t)-recv_bytes, 0); 
+      if(size == -1) 
+		{
+	      if(errno != EAGAIN) 
+         {
+			   perror("");
+			   printf("%s %d\n", __FILE__, __LINE__); 
+			  	exit(1); 
+         }
+      }
+      else 
+      {
+         recv_bytes +=size; 
+      } 
+      if(recv_bytes == sizeof(uuid_t)) 
+      {
+         break;
+      }
+   }
+   return EXIT_SUCCESS;   
+}
+
+int get_uuid_and_confirm_client(agent_t *agent, int fd) 
+{
+   client_t * new_client; 
+   struct client_hash_struct *client_hash;
+   uuid_t uuid;
+   printf("%d %d \n", fd, agent->agent_fd_pool[fd]); 
+   get_uuid(agent->agent_fd_pool[fd], &uuid); 
+   
+
+
+   
+   HASH_FIND_INT(agent->clients_hashes, uuid, client_hash); 
+
+   if(client_hash == NULL) 
+   {
+ 	   new_client = init_new_client(agent, &uuid); 
+/*
+      char out[37]; 
+      uuid_unparse(uuid, out); 
+      printf("%s\n", out); 
+*/ 
+      new_client->agent_sock[new_client->num_parallel_connections] = 
+         agent->agent_fd_pool[fd]; 
+      new_client->agent_fd_poll[new_client->num_parallel_connections] = IN; 
+      new_client->num_parallel_connections++; 
+      connect_host_side(agent, new_client); 
+      new_client->host_fd_poll  = OFF; 
+   } 
+   else 
+   { 
+      client_hash->client->agent_sock[client_hash->client->num_parallel_connections] = 
+         agent->agent_fd_pool[fd]; 
+
+      client_hash->client->agent_fd_poll[client_hash->client->num_parallel_connections] = IN; 
+      client_hash->client->num_parallel_connections++; 
+  
+     if(client_hash->client->num_parallel_connections == agent->options.num_parallel_connections)
+     {
+       client_hash->accept_start.tv_sec -= 10; 
+     }
+   }
+
+ 
+
+   if(epoll_ctl(agent->event_pool, EPOLL_CTL_DEL, 
+     agent->agent_fd_pool[fd], NULL)) 
+   {
+      perror("");
+		printf("%s %d\n", __FILE__, __LINE__); 
+		exit(1); 
+   }
+
+   agent->agent_fd_pool[fd] = EMPTY;  
+
+   return EXIT_SUCCESS; 
+}
+
+
+
+int  agent_connected_event(agent_t *agent, event_info_t *event_info)
+{ 
+   
+	int optval; 
+	socklen_t val = sizeof(optval); 
+   client_t *new_client = event_info->client; 
+
+	getsockopt(new_client->agent_sock[event_info->fd],SOL_SOCKET, SO_ERROR, &optval, &val);   
+	if(!optval)
+	{
+      printf("good %d\n", event_info->fd); 
+  		new_client->num_parallel_connections++; 
+		new_client->agent_fd_poll[event_info->fd] = IN;  
+      send_uuid(new_client->agent_sock[event_info->fd], new_client->client_hash.id); 
+	}
+	else 
+	{
+      printf("%d\n", errno); 
+		perror(""); 
+		printf("failed %d\n", event_info->fd); 
+      if(errno == 115) return EXIT_SUCCESS;  
+	}
+	if(epoll_ctl(agent->event_pool, EPOLL_CTL_DEL, 
+		new_client->agent_sock[event_info->fd], NULL))
+	{
+		perror("");
+		printf("%s %d\n", __FILE__, __LINE__); 
+		exit(1); 
+	}	
+   if(new_client->num_parallel_connections == agent->options.num_parallel_connections
+      && new_client->host_fd_poll == IN)
+   { 
+	   //set time back so it will be expired next time time is checked
+	   new_client->client_hash.accept_start.tv_sec -= 6; 
+
+   }
+   return EXIT_SUCCESS; 
+}
+
+
+int clean_up_unconnected_parallel_sockets(agent_t *agent, client_t *client)
+{
+	/* do some clean up for sockets that didn't connect */ 
+   int count; 
+	for(count = 0; count < agent->options.num_parallel_connections; count++)
+	{ 
+		if(client->agent_fd_poll[count] == OFF)
+		{ 
+         printf("Closed %d\n", count); 
+			close(client->agent_sock[count]); 
+		} 
+	} 
+	return EXIT_SUCCESS; 
+}
+
+
+client_t * init_new_client(agent_t *agent, uuid_t * uuid) 
 { 
    int i; 
 	client_t *new_client; 	
 	new_client = calloc(sizeof(client_t),1); 
+   if(new_client == NULL) 
+   { 
+      printf("Malloc failed!\n"); 
+      exit(1); 
+   } 
    new_client->buffered_packet_table = NULL; 
 
 	new_client->agent_sock = calloc(sizeof(int) , agent->options.num_parallel_connections); 
@@ -530,9 +775,11 @@ client_t * init_new_client(agent_t *agent )
    new_client->buffered_packet = calloc(sizeof(packet_hash_t) , agent->options.num_parallel_connections); 
    new_client->packet =  calloc(sizeof(serialized_data_t) ,agent->options.num_parallel_connections);  
    new_client->agent_fd_poll = calloc(sizeof(char) , agent->options.num_parallel_connections); 
+   new_client->num_parallel_connections = 0; 
 
-	if(new_client == NULL || 
-      new_client->agent_sock == NULL ||  
+
+
+	if(new_client->agent_sock == NULL ||  
       new_client->buffered_packet == NULL || 
       new_client->agent_fd_poll == NULL || 
       new_client->packet == NULL || 
@@ -542,11 +789,28 @@ client_t * init_new_client(agent_t *agent )
 		return NULL; 
 	}
 
+
 	for(i = 0; i < agent->options.num_parallel_connections; i++)
 	{
 		new_client->packet[i].host_packet_size = 0; 	
       new_client->buffered_packet[i].size = 0 ; 
 	} 
+   new_client->client_hash.client =  new_client; 
+   gettimeofday(&new_client->client_hash.accept_start, NULL);
+   if(uuid == NULL)
+   {
+      uuid_generate(new_client->client_hash.id);  
+   } 
+   else 
+   {
+      memcpy(new_client->client_hash.id, *uuid, sizeof(uuid_t)); 
+   } 
+      HASH_ADD_INT(agent->clients_hashes, id, (&new_client->client_hash)); 
+/*
+      char out[37]; 
+      uuid_unparse(new_client->client_hash.id, out); 
+      printf("%s\n", out); 
+ */   
 
 	return new_client; 
 }

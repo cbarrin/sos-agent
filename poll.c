@@ -18,6 +18,8 @@
 #include <fcntl.h>
 #include <sys/epoll.h>
 #include <sys/time.h>
+#include <uuid/uuid.h>
+
 
 #include "uthash.h"
 #include "common.h"
@@ -35,10 +37,11 @@ int poll_loop(agent_t *agent)
 	int n_events; 
    int i;
    int timeout = 1000; 
-   struct timeval accept_start, accept_end; 
+   struct timeval accept_start; 
+   struct timeval current_time; 
    accept_start.tv_sec = -1; 
+	client_hash_t *iter_hash; 
 
-	client_t *new_client = init_new_client(agent); 
 
 	struct epoll_event events; 
 
@@ -51,48 +54,45 @@ int poll_loop(agent_t *agent)
 
 	while(1) 
 	{
+		
+		gettimeofday(&current_time, NULL); 
+		for(iter_hash = agent->clients_hashes; iter_hash != NULL; iter_hash=iter_hash->hh.next)
+		{
+			if((current_time.tv_sec - iter_hash->accept_start.tv_sec)>5)
+			{
 
-       
-      if(accept_start.tv_sec != -1)
-      { 
-         if((accept_end.tv_sec - accept_start.tv_sec) > 5)
-         {
-            i=fork(); 
+				if(!iter_hash->client->num_parallel_connections && iter_hash->client->host_fd_poll != IN) { 
+					printf("All sockets failed to connected or host socket couldn't connect"); 
+				} 
+				else 
+				{
+					printf("FORKING\n"); 
+				
+					i=fork(); 
 
-            if(i < 0) 
-            {
-               printf("fork() failed\n"); 
-               exit(1); 
-            }
-            if(!i) 
-            { 
-					printf("NEW client agent side connect\n"); 
-               printf("%d parallel sockets accepted\n", new_client->num_parallel_connections); 
-               close_listener_sockets(agent); 
-               configure_poll(new_client); 
-					poll_data_transfer(agent, new_client); 
-            }
-            else 
-            {
-         		agent->listen_fds.event_host.events =  EPOLLIN; 
-		         agent->listen_fds.event_host.data.ptr  = &agent->listen_fds.host_side_listen_event; 
-		         agent->listen_fds.host_side_listen_event.type = HOST_SIDE_CONNECT;
+            	if(i < 0) 
+            	{
+               	printf("fork() failed\n"); 
+               	exit(1); 
+            	}
+            	if(!i) 
+            	{ 
+						printf("NEW client agent side connect\n"); 
+               	printf("%d parallel sockets accepted\n", iter_hash->client->num_parallel_connections); 
+               	close_listener_sockets(agent); 
+						clean_up_unconnected_parallel_sockets(agent, iter_hash->client); 
+               	configure_poll(iter_hash->client); 
+						poll_data_transfer(agent, iter_hash->client); 
+            	}
+					//parent 
+					//free old client  FIX.ME 
+					//remove hash entry 
+					HASH_DEL(agent->clients_hashes, iter_hash);  	
+	            clean_up_connections(iter_hash->client); 
+				} 
+			}
+		}
 
-   		      if( epoll_ctl(agent->event_pool, EPOLL_CTL_ADD, 
-   			      agent->listen_fds.host_listen_sock, &agent->listen_fds.event_host))
-   		      {
-   			      perror(""); 
-   			      printf("%s %d\n", __FILE__, __LINE__); 
-   			      exit(1); 	
-   		      }
-               accept_start.tv_sec = -1; 
-               new_client->num_parallel_connections = 0; 
-               clean_up_connections(new_client); 
-			      printf("CONTINUE PARENT\n"); 
-            }
-         } 
-         gettimeofday(&accept_end, NULL); 
-      }
 
 		n_events = epoll_wait(agent->event_pool, &events, 1, timeout); 
 
@@ -103,56 +103,29 @@ int poll_loop(agent_t *agent)
 		}
       else if (n_events) 
       { 
-
-
 			event_info_t *event_info = (event_info_t *)events.data.ptr; 
 
          if(event_info->type ==  HOST_SIDE_CONNECT) 
-         {
-				handle_host_side_connect(agent, new_client); 		
-            i= fork(); 
-            if(i < 0) 
-            {
-               printf("fork() failed\n"); 
-               exit(1); 
-            }
-            if(!i) 
-            { 
-					printf("NEW client host side connect\n"); 
-               close_listener_sockets(agent); 
-               configure_poll(new_client); 
-					poll_data_transfer(agent, new_client); 
-            }
-            else 
-            {
-              clean_up_connections(new_client); 
-              new_client->num_parallel_connections = 0; 
-            }
+			{
+				handle_host_side_connect(agent); 		
          }
+         else if (event_info->type == AGENT_CONNECTED)
+         {
+            agent_connected_event(agent, event_info); 
+         } 
 			else if ( event_info->type == AGENT_SIDE_CONNECT)
          {
-            if(!new_client->num_parallel_connections)
-            {
-               if(epoll_ctl(agent->event_pool, EPOLL_CTL_DEL, 
-                  agent->listen_fds.host_listen_sock, NULL))
-               {
-			         perror(""); 
-         			printf("%s %d\n", __FILE__, __LINE__); 
-		            exit(1); 	
-               }
-               gettimeofday(&accept_start, NULL); 
-               gettimeofday(&accept_end, NULL); 
-               connect_host_side(agent, new_client); 
-            }
-
-            accept_agent_side(agent, new_client, event_info->fd); 
-         
-            if(new_client->num_parallel_connections == agent->options.num_parallel_connections) 
-            {
-               accept_end.tv_sec +=6; 
-            }
-         }
-         else
+				accept_agent_side(agent, event_info); 
+			}
+			else if (event_info->type == AGENT_CONNECTED_UUID)
+			{
+				get_uuid_and_confirm_client(agent, event_info->fd);  
+			} 
+			else if(event_info->type == HOST_CONNECTED)
+			{
+				handle_host_connected(agent, event_info->client); 
+			}
+        else
          {
 			   printf("unknown event_into type!!\n"); 
 			   exit(1); 

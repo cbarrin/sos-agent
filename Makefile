@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -Wall -O3 -lpthread -g -ggdb -I/usr/include/mysql
-LIBS = -L/usr/local/lib -lsctp -L/usr/lib/mysql -lmysqlclient  -I/usr/include/libxml2  -lxml2  -I/usr/local/include  -pthread -L/usr/local/lib -lprotobuf-c -lz -lpthread  
+CFLAGS = -Wall  -lpthread -g -ggdb -I/usr/include/mysql
+LIBS = -L/usr/local/lib -lsctp -L/usr/lib/mysql -lmysqlclient  -I/usr/include/libxml2  -lxml2  -I/usr/local/include  -pthread -L/usr/local/lib -lprotobuf-c -lz -lpthread   -luuid
 
 HASHDIR=./uthash
 CFLAGS +=-I$(HASHDIR)

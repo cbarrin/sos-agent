@@ -18,6 +18,8 @@
 #include <fcntl.h>
 #include <sys/epoll.h>
 #include <sys/time.h>
+#include <uuid/uuid.h>
+
 
 #include "common.h"
 #include "packet.pb-c.h"

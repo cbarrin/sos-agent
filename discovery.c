@@ -17,7 +17,8 @@
 #include <poll.h>
 #include <fcntl.h>
 #include <sys/epoll.h>
-#include <omp.h>
+#include <uuid/uuid.h>
+
 
 #include "uthash.h"
 #include "common.h"
