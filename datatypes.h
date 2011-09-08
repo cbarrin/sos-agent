@@ -1,5 +1,11 @@
 #define PARENT 0 
 #define CHILD 1 
+#define OFF 0
+#define IN 1 
+#define OUT 2
+#define INAndOut 3
+#define EMPTY -1
+
 
 
 enum defines 
@@ -105,13 +111,6 @@ typedef struct serialized_data_struct
    int host_sent_size; 
 } serialized_data_t; 
 
-
-
-#define OFF 0
-#define IN 1 
-#define OUT 2
-#define INAndOut 3
-#define EMPTY -1
 
 typedef struct client_struct 
 {

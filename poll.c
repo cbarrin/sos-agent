@@ -108,27 +108,37 @@ int poll_loop(agent_t *agent)
 
          if(event_info->type ==  HOST_SIDE_CONNECT) 
 			{
+#ifdef DEBUG
 				printf("HOST_SIDE_CONNECT\n"); 
+#endif 
 				handle_host_side_connect(agent); 		
          }
          else if (event_info->type == AGENT_CONNECTED)
          {
+#ifdef DEBUG
 				printf("AGENT_CONNECTED\n"); 
+#endif 
             agent_connected_event(agent, event_info); 
          } 
 			else if ( event_info->type == AGENT_SIDE_CONNECT)
          {
+#ifdef DEBUG
 				printf("ACCEPT_AGENT_SIDE\n"); 
+#endif 
 				accept_agent_side(agent, event_info); 
 			}
 			else if (event_info->type == AGENT_CONNECTED_UUID)
 			{
+#ifdef DEBUG
 				printf("AGENT_CONNECTED_UUID\n"); 
+#endif 
 				get_uuid_and_confirm_client(agent, event_info->fd);  
 			} 
 			else if(event_info->type == HOST_CONNECTED)
 			{
+#ifdef DEBUG
 				printf("HOST_CONNECTED\n"); 
+#endif 
 				handle_host_connected(agent, event_info->client); 
 			}
         else
