@@ -330,6 +330,7 @@ int accept_host_side(agent_t *agent, client_t *new_client)
 {
 	socklen_t sin_size; 
 	struct sockaddr_storage their_addr; 
+	struct epoll_event event; 
 
 	sin_size = sizeof(their_addr); 
 
@@ -341,8 +342,9 @@ int accept_host_side(agent_t *agent, client_t *new_client)
 	   printf("%s %d\n", __FILE__, __LINE__); 
       exit(1); 
 	}
-   
-/*
+
+   new_client->host_fd_poll = OFF; 
+	setnonblocking(new_client->host_sock); 
 	event.events = EPOLLOUT; 
    event.data.ptr =  &new_client->host_side_event_info; 
    new_client->host_side_event_info.type = HOST_CONNECTED;  
@@ -355,10 +357,8 @@ int accept_host_side(agent_t *agent, client_t *new_client)
 	   printf("%s %d\n", __FILE__, __LINE__); 
 	   exit(1); 
 	}
-*/ 
-   new_client->host_fd_poll = IN; 
 
-	setnonblocking(new_client->host_sock); 
+
 
 
 	return EXIT_SUCCESS; 
@@ -435,11 +435,12 @@ int handle_host_connected(agent_t *agent, client_t * client)
 	if(!optval)
 	{
       client->host_fd_poll = IN; 
+      printf("%d conncted\n", client->host_sock); 
 
 		if( epoll_ctl(agent->event_pool, EPOLL_CTL_DEL, 
 	   	client->host_sock, NULL)) 
 		{ 
-				printf("%d\n", client->host_sock); 
+				//printf("%d\n", client->host_sock); 
 	   		perror("");
 	   		printf("%s %d\n", __FILE__, __LINE__); 
 	   		exit(1); 
@@ -447,10 +448,11 @@ int handle_host_connected(agent_t *agent, client_t * client)
    } 
    else 
    {
-      printf("Failed to connect to host\n"); 
+   
+      printf("Failed to connect to host fd= %d %d\n", client->host_sock, client->host_fd_poll); 
       perror(""); 
 	   printf("%s %d\n", __FILE__, __LINE__); 
-//		exit(1); 
+		exit(1); 
    } 
 
 	 
@@ -504,6 +506,7 @@ int connect_host_side(agent_t *agent, client_t *new_client)
 
    new_client->host_fd_poll = OFF; 
 
+   printf("CONNECTING %d\n", new_client->host_sock); 
    if(connect(new_client->host_sock, 
       (struct sockaddr *) &servaddr, sizeof(servaddr)) == -1)
    {
@@ -513,7 +516,6 @@ int connect_host_side(agent_t *agent, client_t *new_client)
 	//		exit(1); 
 	//	} 
    }   
-
 
    return EXIT_SUCCESS;   
 }
@@ -667,9 +669,10 @@ int get_uuid_and_confirm_client(agent_t *agent, int fd)
       client_hash->client->agent_fd_poll[client_hash->client->num_parallel_connections] = IN; 
       client_hash->client->num_parallel_connections++; 
   
-     if(client_hash->client->num_parallel_connections == agent->options.num_parallel_connections)
+     if(client_hash->client->num_parallel_connections == agent->options.num_parallel_connections 
+         && client_hash->client->host_fd_poll == IN)
      {
-       client_hash->accept_start.tv_sec -= 10; 
+       client_hash->accept_start.tv_sec -= 6; 
      }
    }
 
@@ -710,7 +713,9 @@ int  agent_connected_event(agent_t *agent, event_info_t *event_info)
       printf("%d\n", errno); 
 		perror(""); 
 		printf("failed %d\n", event_info->fd); 
-      if(errno == 115) return EXIT_SUCCESS;  
+	   printf("%s %d\n", __FILE__, __LINE__); 
+      exit(1); 
+      //if(errno == 115) return EXIT_SUCCESS;  
 	}
 	if(epoll_ctl(agent->event_pool, EPOLL_CTL_DEL, 
 		new_client->agent_sock[event_info->fd], NULL))

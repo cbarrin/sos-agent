@@ -61,12 +61,13 @@ int poll_loop(agent_t *agent)
 			if((current_time.tv_sec - iter_hash->accept_start.tv_sec)>5)
 			{
 
-				if(!iter_hash->client->num_parallel_connections && iter_hash->client->host_fd_poll != IN) { 
+				if(!iter_hash->client->num_parallel_connections || iter_hash->client->host_fd_poll == 0) 
+				{ 
 					printf("All sockets failed to connected or host socket couldn't connect"); 
 				} 
 				else 
 				{
-					printf("FORKING\n"); 
+					printf("FORKING %d\n", iter_hash->client->host_fd_poll); 
 				
 					i=fork(); 
 
@@ -84,12 +85,12 @@ int poll_loop(agent_t *agent)
                	configure_poll(iter_hash->client); 
 						poll_data_transfer(agent, iter_hash->client); 
             	}
-					//parent 
-                close_all_data_sockets(agent, iter_hash->client); 
-                free_client(agent, iter_hash->client);  
-					 HASH_DEL(agent->clients_hashes, iter_hash);  	
+				}
+				//parent 
+            close_all_data_sockets(agent, iter_hash->client); 
+            free_client(agent, iter_hash->client);  
+				HASH_DEL(agent->clients_hashes, iter_hash);  	
 
-				} 
 			}
 		}
 
@@ -107,22 +108,27 @@ int poll_loop(agent_t *agent)
 
          if(event_info->type ==  HOST_SIDE_CONNECT) 
 			{
+				printf("HOST_SIDE_CONNECT\n"); 
 				handle_host_side_connect(agent); 		
          }
          else if (event_info->type == AGENT_CONNECTED)
          {
+				printf("AGENT_CONNECTED\n"); 
             agent_connected_event(agent, event_info); 
          } 
 			else if ( event_info->type == AGENT_SIDE_CONNECT)
          {
+				printf("ACCEPT_AGENT_SIDE\n"); 
 				accept_agent_side(agent, event_info); 
 			}
 			else if (event_info->type == AGENT_CONNECTED_UUID)
 			{
+				printf("AGENT_CONNECTED_UUID\n"); 
 				get_uuid_and_confirm_client(agent, event_info->fd);  
 			} 
 			else if(event_info->type == HOST_CONNECTED)
 			{
+				printf("HOST_CONNECTED\n"); 
 				handle_host_connected(agent, event_info->client); 
 			}
         else
