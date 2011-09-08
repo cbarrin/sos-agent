@@ -31,7 +31,6 @@
 #include "discovery.h"
 
 
-
 int poll_loop(agent_t *agent) 
 {
 	int n_events; 
@@ -63,11 +62,13 @@ int poll_loop(agent_t *agent)
 
 				if(!iter_hash->client->num_parallel_connections || iter_hash->client->host_fd_poll == 0) 
 				{ 
-					printf("All sockets failed to connected or host socket couldn't connect"); 
+					printf("All sockets failed to connected or host socket couldn't connect\n"); 
 				} 
 				else 
 				{
+#ifdef DEBUG
 					printf("FORKING %d\n", iter_hash->client->host_fd_poll); 
+#endif
 				
 					i=fork(); 
 
@@ -82,6 +83,7 @@ int poll_loop(agent_t *agent)
                	printf("%d parallel sockets accepted\n", iter_hash->client->num_parallel_connections); 
                	close_listener_sockets(agent); 
 						clean_up_unconnected_parallel_sockets(agent, iter_hash->client); 
+						HASH_DEL(agent->clients_hashes, iter_hash);  	
                	configure_poll(iter_hash->client); 
 						poll_data_transfer(agent, iter_hash->client); 
             	}

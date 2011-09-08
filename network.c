@@ -451,7 +451,15 @@ int handle_host_connected(agent_t *agent, client_t * client)
       printf("Failed to connect to host fd= %d %d\n", client->host_sock, client->host_fd_poll); 
       perror(""); 
 	   printf("%s %d\n", __FILE__, __LINE__); 
-		exit(1); 
+     	if( epoll_ctl(agent->event_pool, EPOLL_CTL_DEL, 
+	   	client->host_sock, NULL)) 
+		{ 
+	   		perror("");
+	   		printf("%s %d\n", __FILE__, __LINE__); 
+	   		exit(1); 
+   	}
+      client->host_fd_poll = OFF; 
+      client->client_hash.accept_start.tv_sec -= 6; 
    } 
 
 	 
@@ -630,9 +638,9 @@ int get_uuid_and_confirm_client(agent_t *agent, int fd)
    client_t * new_client; 
    struct client_hash_struct *client_hash;
    uuid_t uuid;
+   
    get_uuid(agent->agent_fd_pool[fd], &uuid); 
-   
-   
+     
    HASH_FIND_INT(agent->clients_hashes, uuid, client_hash); 
 
    if(client_hash == NULL) 
