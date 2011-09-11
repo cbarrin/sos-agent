@@ -5,6 +5,7 @@
 #define OUT 2
 #define INAndOut 3
 #define EMPTY -1
+#define FULL -2
 
 
 
@@ -91,8 +92,11 @@ typedef struct packet_hash_struct
 	int agent_id;  /* agent_sock_buffer[agent_id] == payload data */   
    int host_sent_size; 
 	int size; 
+   uint8_t need_header_size; 
+   int packet_index; 
 	uint8_t serialized_data[MAX_BUFFER *2]; 
 	Packet *packet;
+   char in_use; 
 	UT_hash_handle hh; 
 }packet_hash_t; 
 
@@ -116,11 +120,12 @@ typedef struct client_struct
 {
    struct client_hash_struct client_hash; 
 	struct packet_hash_struct *buffered_packet_table; 
-	struct packet_hash_struct *buffered_packet; 
+	struct packet_hash_struct **buffered_packet; 
    int send_seq; 
    int recv_seq; 
 
-   int last_fd_sent; 
+
+
    int client_event_pool; 
 	int event_poll_out_agent; 
 	int event_poll_out_host; 
@@ -129,10 +134,14 @@ typedef struct client_struct
    struct epoll_event event; 
    int host_sock; 
    int *agent_sock; 
-   struct serialized_data_struct * packet; 
+   struct serialized_data_struct *packet; 
+
 	char *agent_fd_poll; 
 	char host_fd_poll; 
    int num_parallel_connections; 
+   int *agent_packet_queue_count; 
+   int *agent_packet_index_in; 
+   int agent_packet_index_out; 
 } client_t; 
 
 

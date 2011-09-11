@@ -30,7 +30,7 @@
 #include "poll.h"
 #include "discovery.h"
 
-
+//#define DEBUG
 int poll_loop(agent_t *agent) 
 {
 	int n_events; 
@@ -314,15 +314,17 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 {
 
 	int n_events; 
-	int timeout = -1; 
+	int timeout = 10000; 
 	struct epoll_event event;
 
 
 	while(1) 
 	{
 		n_events = epoll_wait(client->client_event_pool, &event, 1, timeout); 
+	
 		if(n_events < 0) 
 		{
+			printf("%d %d\n", timeout, ((event_info_t *)event.data.ptr)->agent_id ); 
 			perror(""); 
 		   printf("%s %d\n", __FILE__, __LINE__); 
 		   exit(1); 
@@ -341,6 +343,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 					printf("%s %d\n", __FILE__, __LINE__); 
 					exit(1); 
 				} 
+				if(event.events &EPOLLERR) { perror(""); exit(1); } 
 				if(n_events) 
 				{
 					event_info_t *event_info_agent = (event_info_t *)event.data.ptr; 
@@ -352,7 +355,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
                   timeout = 1000; 
                }  
 				}
-				else 
+				else
 				{
 					/* All parallel socks are full.  FIX ME*/
 #ifdef DEBUG
@@ -367,7 +370,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 			}
 			else if(event_info_host->type == AGENT_SIDE_DATA && event.events & EPOLLOUT)
 			{
-				if(event_info_host->client->packet[event_info_host->agent_id].host_packet_size == 0)
+				if(event_info_host->client->packet[event_info_host->agent_id].host_packet_size == 0 )
 				{
 					/* parallel socket unblocked */ 	
 #ifdef DEBUG
@@ -404,7 +407,16 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 			}
 			else 
 			{
-				printf("Uknown event_info->type! [%d]\n", event_info_host->type); 
+				if(event.events&EPOLLERR) 
+				{ 
+					perror(""); 
+         		free_client(agent, client);         
+         		clean_up_connections(client); 
+         		printf("All sockets closed!\n"); 
+         		exit(1); 
+				} 
+				printf("Uknown event_info->type! [%d] pollinfo[%X]\n", event_info_host->type, event.events); 
+				perror(""); 
 				exit(1); 
 			}
 
