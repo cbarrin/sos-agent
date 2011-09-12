@@ -1070,7 +1070,7 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 #endif
 
 int frag = 0; 
-/*   if(event->client->agent_packet_index_in[event->agent_id] != EMPTY &&   
+   if(event->client->agent_packet_index_in[event->agent_id] != EMPTY &&   
       event->client->buffered_packet[event->agent_id][event->client->agent_packet_index_in[event->agent_id]].need_header_size)
     {
       size_count =  
@@ -1092,15 +1092,16 @@ int frag = 0;
     }
 
     if(get_header) { 
-*/ 
-	if(event->client->agent_packet_index_in[event->agent_id] == EMPTY) {  
+
+/*	if(event->client->agent_packet_index_in[event->agent_id] == EMPTY) {  
 
       packet_index = get_free_packet_index(agent, event); 
       if(packet_index < 0) { 
          printf("I SHOULDNT HAVE BEEN TRIGGERED!! %d \n", event->agent_id); 
          exit(1); 
       } 
-      event->client->agent_packet_index_in[event->agent_id] = packet_index; 
+*/ 
+  //    event->client->agent_packet_index_in[event->agent_id] = packet_index; 
  
 
 
@@ -1128,7 +1129,7 @@ int frag = 0;
                   exit(1); 
 					  // return EXIT_SUCCESS; 
 				   }
-               else if(0){
+               else {
 						printf("Blocked on %d\n", size_count); 
                	event->client->agent_packet_index_in[event->agent_id] = packet_index; 
                	event->client->buffered_packet[event->agent_id][packet_index].need_header_size = size_count;  
