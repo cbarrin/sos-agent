@@ -1068,13 +1068,17 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
    }   
    printf("\n"); 
 #endif
-   if(event->client->agent_packet_index_in[event->agent_id] != EMPTY &&   
+
+int frag = 0; 
+/*   if(event->client->agent_packet_index_in[event->agent_id] != EMPTY &&   
       event->client->buffered_packet[event->agent_id][event->client->agent_packet_index_in[event->agent_id]].need_header_size)
     {
       size_count =  
       event->client->buffered_packet[event->agent_id][event->client->agent_packet_index_in[event->agent_id]].need_header_size;
       get_header=1; 
       packet_index =  event->client->agent_packet_index_in[event->agent_id]; 
+		printf("starting with %d\n", size_count); 
+		frag=1; 
     }
    else if(event->client->agent_packet_index_in[event->agent_id] == EMPTY)  
    {
@@ -1088,6 +1092,18 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
     }
 
     if(get_header) { 
+*/ 
+	if(event->client->agent_packet_index_in[event->agent_id] == EMPTY) {  
+
+      packet_index = get_free_packet_index(agent, event); 
+      if(packet_index < 0) { 
+         printf("I SHOULDNT HAVE BEEN TRIGGERED!! %d \n", event->agent_id); 
+         exit(1); 
+      } 
+      event->client->agent_packet_index_in[event->agent_id] = packet_index; 
+ 
+
+
 	   while(1) { 
 		   if(( size = recv(event->fd, (uint8_t *)&n_size +size_count, sizeof(n_size) - size_count, 0)) == -1)  
 		   { 
@@ -1112,12 +1128,11 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
                   exit(1); 
 					  // return EXIT_SUCCESS; 
 				   }
-               else {
-
-               event->client->agent_packet_index_in[event->agent_id] = packet_index; 
-
-                event->client->buffered_packet[event->agent_id][packet_index].need_header_size = size_count;  
-                  return  EXIT_SUCCESS; 
+               else if(0){
+						printf("Blocked on %d\n", size_count); 
+               	event->client->agent_packet_index_in[event->agent_id] = packet_index; 
+               	event->client->buffered_packet[event->agent_id][packet_index].need_header_size = size_count;  
+               	return  EXIT_SUCCESS; 
                }
 			   } 
 			   else 
@@ -1140,6 +1155,8 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
          else if(size > 0) 
          {
 		      size_count +=size; 
+				if(frag)
+				printf("size = %d\n", size); 
          }
 		   if(size_count == sizeof(n_size))
 		   {
@@ -1227,6 +1244,7 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 	if(event->client->buffered_packet[event->agent_id][packet_index].packet == NULL)  
    {
 		printf("protobuf error\n"); 
+		if(frag==1) { printf("FRAG...%d\n", packet_size); } 
       exit(1); 
 	} 
 
