@@ -161,6 +161,16 @@ int poll_loop(agent_t *agent)
    return EXIT_SUCCESS; 
 }
 
+/*
+   If all of the agent socks are full we 
+   want to remove pollin on the host_fd.
+
+   Then we need to poll out on all the agent socks 
+   to let us know when it unblocks  
+
+*/ 
+
+
 int all_agents_socks_full(agent_t *agent, client_t *client)
 {
 	int i; 
@@ -234,6 +244,14 @@ int all_agents_socks_full(agent_t *agent, client_t *client)
 	}
 	return EXIT_SUCCESS; 
 }
+
+/*
+we add pollin back to host_fd because we can send again
+
+then we remove all the POLLOUTs  on the agent FDs we added before 
+
+*/ 
+
 int not_all_agent_socks_full(agent_t *agent, client_t * client) 
 {
 
