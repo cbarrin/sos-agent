@@ -142,6 +142,7 @@ typedef struct client_struct
    int *agent_packet_queue_count; 
    int *agent_packet_index_in; 
    int agent_packet_index_out; 
+	int *agent_needed_header_size; 
 } client_t; 
 
 

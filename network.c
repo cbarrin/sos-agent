@@ -516,8 +516,12 @@ int connect_host_side(agent_t *agent, client_t *new_client)
    if(connect(new_client->host_sock, 
       (struct sockaddr *) &servaddr, sizeof(servaddr)) == -1)
    {
-		perror(""); 
-	   printf("%s %d\n", __FILE__, __LINE__); 
+      if(errno != EINPROGRESS)
+      { 
+		   perror(""); 
+	      printf("%s %d\n", __FILE__, __LINE__); 
+         exit(1); 
+      } 
    }   
 
    return EXIT_SUCCESS;   
@@ -762,6 +766,7 @@ client_t * init_new_client(agent_t *agent, uuid_t * uuid)
    new_client->agent_fd_poll = calloc(sizeof(char) , agent->options.num_parallel_connections); 
    new_client->num_parallel_connections = 0; 
    new_client->agent_packet_queue_count =  malloc(sizeof(int)*agent->options.num_parallel_connections); 
+	new_client->agent_needed_header_size = malloc(sizeof(int)*agent->options.num_parallel_connections); 
 
 
    new_client->packet =  malloc(sizeof(serialized_data_t) * agent->options.num_parallel_connections);  
@@ -770,6 +775,7 @@ client_t * init_new_client(agent_t *agent, uuid_t * uuid)
       new_client->buffered_packet == NULL || 
       new_client->agent_fd_poll == NULL || 
       new_client->agent_packet_index_in == NULL ||  
+      new_client->agent_needed_header_size == NULL ||  
       new_client->agent_packet_queue_count == NULL || 
       new_client->packet == NULL || 
       new_client->agent_side_event_info == NULL )
@@ -790,11 +796,12 @@ client_t * init_new_client(agent_t *agent, uuid_t * uuid)
       new_client->agent_packet_queue_count[i] = 0; 
 		new_client->packet[i].host_packet_size = 0; 	
       new_client->agent_packet_index_in[i] = EMPTY; 
+		new_client->agent_needed_header_size[i] = 0; 
       for(j = 0; j < MAX_QUEUE_SIZE; j++) 
       { 
          new_client->buffered_packet[i][j].size = EMPTY ; 
          new_client->buffered_packet[i][j].in_use = 0 ; 
-         new_client->buffered_packet[i][j].need_header_size = 0 ; 
+//         new_client->buffered_packet[i][j].need_header_size = 0 ; 
       } 
 	} 
    new_client->client_hash.client =  new_client; 
@@ -1060,6 +1067,7 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
    int agent_id;  
    int get_header = 0; 
    int packet_index; 
+
 #ifdef DEBUG
    int i; 
 
@@ -1069,18 +1077,17 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
    printf("\n"); 
 #endif
 
-int frag = 0; 
-   if(event->client->agent_packet_index_in[event->agent_id] != EMPTY &&   
-      event->client->buffered_packet[event->agent_id][event->client->agent_packet_index_in[event->agent_id]].need_header_size)
+   if(event->client->agent_packet_index_in[event->agent_id] != EMPTY  &&   
+		event->client->agent_needed_header_size[event->agent_id]) 
     {
-      size_count =  
-      event->client->buffered_packet[event->agent_id][event->client->agent_packet_index_in[event->agent_id]].need_header_size;
-      get_header=1; 
+		printf("HERE\n"); 
       packet_index =  event->client->agent_packet_index_in[event->agent_id]; 
+      size_count =  event->client->agent_needed_header_size[event->agent_id]; 
+      get_header=1; 
 		printf("starting with %d\n", size_count); 
-		frag=1; 
     }
-   else if(event->client->agent_packet_index_in[event->agent_id] == EMPTY)  
+   else if(event->client->agent_packet_index_in[event->agent_id] == EMPTY && 
+		event->client->agent_needed_header_size[event->agent_id] == 0)	
    {
       get_header=1; 
       packet_index = get_free_packet_index(agent, event); 
@@ -1090,20 +1097,7 @@ int frag = 0;
       } 
       event->client->agent_packet_index_in[event->agent_id] = packet_index; 
     }
-
     if(get_header) { 
-
-/*	if(event->client->agent_packet_index_in[event->agent_id] == EMPTY) {  
-
-      packet_index = get_free_packet_index(agent, event); 
-      if(packet_index < 0) { 
-         printf("I SHOULDNT HAVE BEEN TRIGGERED!! %d \n", event->agent_id); 
-         exit(1); 
-      } 
-*/ 
-  //    event->client->agent_packet_index_in[event->agent_id] = packet_index; 
- 
-
 
 	   while(1) { 
 		   if(( size = recv(event->fd, (uint8_t *)&n_size +size_count, sizeof(n_size) - size_count, 0)) == -1)  
@@ -1132,7 +1126,8 @@ int frag = 0;
                else {
 						printf("Blocked on %d\n", size_count); 
                	event->client->agent_packet_index_in[event->agent_id] = packet_index; 
-               	event->client->buffered_packet[event->agent_id][packet_index].need_header_size = size_count;  
+      				event->client->agent_needed_header_size[event->agent_id] = size_count;  
+		
                	return  EXIT_SUCCESS; 
                }
 			   } 
@@ -1156,12 +1151,13 @@ int frag = 0;
          else if(size > 0) 
          {
 		      size_count +=size; 
-				if(frag)
+				if(size != 4)
 				printf("size = %d\n", size); 
          }
 		   if(size_count == sizeof(n_size))
 		   {
-            event->client->buffered_packet[event->agent_id][event->client->agent_packet_index_in[event->agent_id]].need_header_size=0;  
+				event->client->agent_needed_header_size[event->agent_id] = 0;	
+
 			   break; 
 		   }
 	   }
@@ -1198,7 +1194,6 @@ int frag = 0;
          if(errno == EAGAIN)
          {
             event->client->buffered_packet[event->agent_id][packet_index].host_sent_size = size_count; 
-            event->client->agent_packet_index_in[event->agent_id] = packet_index; 
             return EXIT_SUCCESS; 
          }
          else 
@@ -1245,7 +1240,6 @@ int frag = 0;
 	if(event->client->buffered_packet[event->agent_id][packet_index].packet == NULL)  
    {
 		printf("protobuf error\n"); 
-		if(frag==1) { printf("FRAG...%d\n", packet_size); } 
       exit(1); 
 	} 
 
