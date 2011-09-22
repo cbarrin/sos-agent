@@ -8,7 +8,6 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <netinet/in.h>
-#include <netinet/sctp.h>
 #include <sys/wait.h>
 #include <signal.h>
 #include <ctype.h> 
