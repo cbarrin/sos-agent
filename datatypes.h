@@ -125,7 +125,7 @@ typedef struct client_struct
    int recv_seq; 
 
 
-
+	uint32_t *header_size; 
    int client_event_pool; 
 	int event_poll_out_agent; 
 	int event_poll_out_host; 

@@ -758,6 +758,7 @@ client_t * init_new_client(agent_t *agent, uuid_t * uuid)
 	new_client->agent_side_event_info = calloc(sizeof(struct event_info_struct) ,agent->options.num_parallel_connections); 
    new_client->send_seq = 0; 
    new_client->recv_seq = 0; 
+	new_client->header_size = malloc(sizeof(uint32_t) * agent->options.num_parallel_connections); 
    new_client->buffered_packet = malloc(sizeof(packet_hash_t *) * agent->options.num_parallel_connections); 
    new_client->agent_packet_index_in = malloc(sizeof(int) *agent->options.num_parallel_connections); 
 
@@ -774,6 +775,7 @@ client_t * init_new_client(agent_t *agent, uuid_t * uuid)
       new_client->buffered_packet == NULL || 
       new_client->agent_fd_poll == NULL || 
       new_client->agent_packet_index_in == NULL ||  
+      new_client->header_size == NULL ||  
       new_client->agent_needed_header_size == NULL ||  
       new_client->agent_packet_queue_count == NULL || 
       new_client->packet == NULL || 
@@ -1060,7 +1062,6 @@ int get_free_packet_index(agent_t * agent, event_info_t * event)
 int read_agent_send_host(agent_t * agent, event_info_t *event)
 {
 	int  size; 
-	uint32_t  n_size=0; 
 	int size_count = 0; 
 	uint32_t packet_size; 
    int agent_id;  
@@ -1079,11 +1080,9 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
    if(event->client->agent_packet_index_in[event->agent_id] != EMPTY  &&   
 		event->client->agent_needed_header_size[event->agent_id]) 
     {
-		printf("HERE\n"); 
       packet_index =  event->client->agent_packet_index_in[event->agent_id]; 
       size_count =  event->client->agent_needed_header_size[event->agent_id]; 
       get_header=1; 
-		printf("starting with %d\n", size_count); 
     }
    else if(event->client->agent_packet_index_in[event->agent_id] == EMPTY && 
 		event->client->agent_needed_header_size[event->agent_id] == 0)	
@@ -1097,9 +1096,12 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
       event->client->agent_packet_index_in[event->agent_id] = packet_index; 
     }
     if(get_header) { 
+		
+		event->client->agent_packet_index_in[event->agent_id]  = packet_index; 
 
 	   while(1) { 
-		   if(( size = recv(event->fd, (uint8_t *)&n_size +size_count, sizeof(n_size) - size_count, 0)) == -1)  
+		   if(( size = recv(event->fd, (uint8_t *)&event->client->header_size[event->agent_id] +size_count, 
+				sizeof(uint32_t) - size_count, 0)) == -1)  
 		   { 
             if (errno == ESHUTDOWN || errno == ECONNRESET) 
             {
@@ -1123,7 +1125,9 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 					  // return EXIT_SUCCESS; 
 				   }
                else {
-						printf("Blocked on %d\n", size_count); 
+#ifdef DEBUG
+						printf("blocked with size(%d) index = (%d)\n", size_count, packet_index); 
+#endif
                	event->client->agent_packet_index_in[event->agent_id] = packet_index; 
       				event->client->agent_needed_header_size[event->agent_id] = size_count;  
 		
@@ -1150,10 +1154,8 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
          else if(size > 0) 
          {
 		      size_count +=size; 
-				if(size != 4)
-				printf("size = %d\n", size); 
          }
-		   if(size_count == sizeof(n_size))
+		   if(size_count == sizeof(uint32_t))
 		   {
 				event->client->agent_needed_header_size[event->agent_id] = 0;	
 
@@ -1161,7 +1163,7 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 		   }
 	   }
 	
-	   packet_size = ntohl(n_size); 
+	   packet_size = ntohl(event->client->header_size[event->agent_id]); 
       if(packet_size == 0) { 
          printf("PACKET_SIZE 0 ??? \n"); 
          exit(1); 

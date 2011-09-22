@@ -1,1 +1,1 @@
- ./agent --connections 10 --protocol tcp --verbose 1
+ ./agent --connections 8 --protocol tcp --verbose 1
