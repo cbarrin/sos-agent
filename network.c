@@ -1362,10 +1362,6 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 #endif 
 					event->client->buffered_packet[agent_id][packet_index].host_sent_size = size_count; 	
                event->client->agent_packet_index_out =  packet_index; 
-               if(size_count == 0 && remove_fd)
-               {
-                exit(1); 
-               } 
                /* Got blocked writing on host_sock need to now poll out! */ 
 
                event->client->host_side_event_info.agent_id = agent_id; 
