@@ -1430,6 +1430,8 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 			}
 			if(size_count == event->client->buffered_packet[agent_id][packet_index].packet->payload.len)
 			{
+
+				packet__free_unpacked(event->client->buffered_packet[agent_id][packet_index].packet, NULL); 
 #ifdef DEBUG
             printf("sent %d packet_index %d agent %d\n", event->client->recv_seq, packet_index, agent_id); 
 #endif 
