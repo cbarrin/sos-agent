@@ -458,7 +458,7 @@ int handle_host_connected(agent_t *agent, client_t * client)
 	   		exit(1); 
    	}
       client->host_fd_poll = OFF; 
-      client->client_hash.accept_start.tv_sec -= 6; 
+      client->client_hash.accept_start.tv_sec -= client->num_parallel_connections +10; 
    } 
 
 	 
@@ -667,7 +667,7 @@ int get_uuid_and_confirm_client(agent_t *agent, int fd)
      if(client_hash->client->num_parallel_connections == agent->options.num_parallel_connections 
          && client_hash->client->host_fd_poll == IN)
      {
-       client_hash->accept_start.tv_sec -= 6; 
+       client_hash->accept_start.tv_sec -= client_hash->client->num_parallel_connections +10; 
      }
    }
 
@@ -721,7 +721,7 @@ int  agent_connected_event(agent_t *agent, event_info_t *event_info)
       && new_client->host_fd_poll == IN)
    { 
 	   //set time back so it will be expired next time time is checked
-	   new_client->client_hash.accept_start.tv_sec -= 6; 
+	   new_client->client_hash.accept_start.tv_sec -= 10; 
 
    }
    return EXIT_SUCCESS; 

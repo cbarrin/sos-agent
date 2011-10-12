@@ -56,10 +56,10 @@ int poll_loop(agent_t *agent)
 		gettimeofday(&current_time, NULL); 
 		for(iter_hash = agent->clients_hashes; iter_hash != NULL; iter_hash=iter_hash->hh.next)
 		{
-			if((current_time.tv_sec - iter_hash->accept_start.tv_sec)>5)
+			if((current_time.tv_sec - iter_hash->accept_start.tv_sec)> (agent->options.num_parallel_connections +5))
 			{
 
-				if(!iter_hash->client->num_parallel_connections || iter_hash->client->host_fd_poll == 0) 
+				if(iter_hash->client->num_parallel_connections  != agent->options.num_parallel_connections || iter_hash->client->host_fd_poll == 0) 
 				{ 
 					printf("All sockets failed to connected or host socket couldn't connect\n"); 
 				} 
