@@ -443,6 +443,13 @@ int handle_host_connected(agent_t *agent, client_t * client)
 	   		printf("%s %d\n", __FILE__, __LINE__); 
 	   		exit(1); 
    	}
+		/* all sockets have been connected go go go!!! */
+		if(client->num_parallel_connections == agent->options.num_parallel_connections
+				&& client->host_fd_poll == IN)
+		{
+			client->client_hash.accept_start.tv_sec -= client->num_parallel_connections +10;
+		}
+
    } 
    else 
    {
