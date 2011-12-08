@@ -28,6 +28,7 @@
 #include "network.h"
 #include "poll.h"
 #include "discovery.h"
+#include "controller.h"
 
 //#define DEBUG
 int poll_loop(agent_t *agent) 
@@ -56,7 +57,7 @@ int poll_loop(agent_t *agent)
 		gettimeofday(&current_time, NULL); 
 		for(iter_hash = agent->clients_hashes; iter_hash != NULL; iter_hash=iter_hash->hh.next)
 		{
-			if((current_time.tv_sec - iter_hash->accept_start.tv_sec)> (agent->options.num_parallel_connections +5))
+			if((  current_time.tv_sec - iter_hash->accept_start.tv_sec)> (TIMEOUT))
 			{
 
 				if(iter_hash->client->num_parallel_connections  != agent->options.num_parallel_connections || iter_hash->client->host_fd_poll == 0) 
@@ -107,7 +108,14 @@ int poll_loop(agent_t *agent)
       { 
 			event_info_t *event_info = (event_info_t *)events.data.ptr; 
 
-         if(event_info->type ==  HOST_SIDE_CONNECT) 
+			if(event_info->type == CONTROLLER_MESSAGE) { 
+            
+#ifdef DEBUG
+            printf("CONTROLLER_MESSAGE\n"); 
+#endif
+            get_controller_message(&agent->controller); 
+			} 
+         else if(event_info->type ==  HOST_SIDE_CONNECT) 
 			{
 #ifdef DEBUG
 				printf("HOST_SIDE_CONNECT\n"); 
@@ -119,7 +127,7 @@ int poll_loop(agent_t *agent)
 #ifdef DEBUG
 				printf("AGENT_CONNECTED\n"); 
 #endif 
-            agent_connected_event(agent, event_info); 
+           agent_connected_event(agent, event_info); 
          } 
 			else if ( event_info->type == AGENT_SIDE_CONNECT)
          {
@@ -144,7 +152,7 @@ int poll_loop(agent_t *agent)
 			}
         else
          {
-			   printf("unknown event_into type!!\n"); 
+			   printf("unknown event_into type!! [%d]\n", event_info->type); 
 			   exit(1); 
          }
       }
@@ -152,6 +160,9 @@ int poll_loop(agent_t *agent)
       {
          if(!agent->options.nonOF) 
          {
+#ifdef DEBUG
+            printf("ping \n"); 
+#endif
             send_discovery_message(&agent->discovery); 
          }
       }
@@ -365,7 +376,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 				{
 					event_info_t *event_info_agent = (event_info_t *)event.data.ptr; 
 #ifdef DEBUG
-               printf("A %d\n",  event_info_agent->agent_id); 
+ //              printf("A %d\n",  event_info_agent->agent_id); 
 #endif 
 					if(read_host_send_agent(agent, event_info_host, event_info_agent) == CLOSE) 
                {
@@ -376,11 +387,11 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 				{
 					/* All parallel socks are full.  FIX ME*/
 #ifdef DEBUG
-					printf("BAD!!! %d\n", event_info_host->client->host_fd_poll); 
+//					printf("BAD!!! %d\n", event_info_host->client->host_fd_poll); 
 #endif
 					all_agents_socks_full(agent, event_info_host->client); 
 #ifdef DEBUG
-					printf("AFTER BAD!!! %d\n", event_info_host->client->host_fd_poll); 
+//					printf("AFTER BAD!!! %d\n", event_info_host->client->host_fd_poll); 
 #endif
 			
 				}
@@ -391,7 +402,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 				{
 					/* parallel socket unblocked */ 	
 #ifdef DEBUG
-               printf("Something freed %d perm=%d\n", event_info_host->agent_id, event_info_host->client->host_fd_poll); 
+ //              printf("Something freed %d perm=%d\n", event_info_host->agent_id, event_info_host->client->host_fd_poll); 
 #endif
 					not_all_agent_socks_full(agent, event_info_host->client); 
 				} 
@@ -404,7 +415,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 			else if (event_info_host->type == AGENT_SIDE_DATA && event.events & EPOLLIN)
 			{
 #ifdef DEBUG
-			   printf("c %d\n",event_info_host->agent_id); 
+//			   printf("c %d\n",event_info_host->agent_id); 
 #endif
 				if(read_agent_send_host(agent, event_info_host) == CLOSE)
             {
@@ -415,7 +426,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 			else if(event_info_host->type == HOST_SIDE_DATA && event.events & EPOLLOUT )
 			{
 #ifdef DEBUG
-				printf("d %d\n", event_info_host->agent_id); 
+//				printf("d %d\n", event_info_host->agent_id); 
 #endif
 				if(send_data_host(agent,event_info_host, 1) == CLOSE) 
             {

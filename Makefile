@@ -1,4 +1,5 @@
 CC = gcc
+CC = clang
 CFLAGS = -Wall  -lpthread -g -ggdb 
 LIBS = -L/usr/local/lib -I/usr/include/libxml2  -lxml2  -I/usr/local/include  -pthread -L/usr/local/lib -lprotobuf-c -lz -lpthread   -luuid
 

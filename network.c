@@ -113,8 +113,26 @@ int init_agent(agent_t *agent)
 {
 	init_poll(agent); 
 	create_listen_sockets(agent); 
-   init_discovery(&agent->discovery); 
 	init_controller_listener(&agent->controller); 
+
+   /* add controller socket to POLL set */     
+   agent->listen_fds.event_controller.events = POLLIN; 
+   agent->listen_fds.event_controller.data.ptr = &agent->listen_fds.controller_message_event; 
+   agent->listen_fds.controller_message_event.type = CONTROLLER_MESSAGE;
+   agent->listen_fds.controller_message_event.fd = agent->controller.port;
+   
+   if( epoll_ctl(agent->event_pool, EPOLL_CTL_ADD, 
+      agent->controller.sock, &agent->listen_fds.event_controller)) 
+   { 
+      perror("");
+		printf("%s %d\n", __FILE__, __LINE__); 
+   	exit(1); 
+   } 
+
+
+   init_discovery(&agent->discovery); 
+
+
 
 	return EXIT_SUCCESS; 
 }
@@ -309,16 +327,23 @@ client_t * handle_host_side_connect(agent_t *agent)
 {
 
  	client_t *new_client = init_new_client(agent, NULL); 
-	if(!agent->options.nonOF && new_client != NULL)
-	{
-		get_controller_message(&agent->controller); 
-	}
+//	if(!agent->options.nonOF && new_client != NULL)
+//	{
+			
+		//get_controller_message(&agent->controller); 
+//	}
 
 	
 	if(new_client != NULL) 
 	{
 		accept_host_side(agent, new_client); 
-	   connect_agent_side(agent, new_client); 
+
+		if(check_for_transfer_request(agent, new_client, "CLIENT")) 
+		{
+	   	connect_agent_side(agent, new_client); 
+		}else { 
+         printf("DID NOT FIND!\n"); 
+      } 
 	}
 	
 	return new_client; 
@@ -328,7 +353,8 @@ client_t * handle_host_side_connect(agent_t *agent)
 int accept_host_side(agent_t *agent, client_t *new_client) 
 {
 	socklen_t sin_size; 
-	struct sockaddr_storage their_addr; 
+	//struct sockaddr_storage their_addr; 
+	struct sockaddr_in their_addr; 
 	struct epoll_event event; 
 
 	sin_size = sizeof(their_addr); 
@@ -341,6 +367,11 @@ int accept_host_side(agent_t *agent, client_t *new_client)
 	   printf("%s %d\n", __FILE__, __LINE__); 
       exit(1); 
 	}
+   
+	
+	strcpy(new_client->source_ip, inet_ntoa(their_addr.sin_addr)); 
+	new_client->source_port = htons(their_addr.sin_port); 
+	
 
    new_client->host_fd_poll = OFF; 
 	setnonblocking(new_client->host_sock); 
@@ -356,8 +387,6 @@ int accept_host_side(agent_t *agent, client_t *new_client)
 	   printf("%s %d\n", __FILE__, __LINE__); 
 	   exit(1); 
 	}
-
-
 
 
 	return EXIT_SUCCESS; 
@@ -385,9 +414,7 @@ int accept_agent_side( agent_t *agent, event_info_t *event_info)
    struct sockaddr_storage their_addr; 
    sin_size = sizeof(their_addr); 
    int index = find_empty_agent_sock(agent); 
-   //static int index = 0; 
 	struct epoll_event event; 
-//   memset(&event, 0, sizeof(event)); 
 
    if(index < 0) 
    { 
@@ -419,7 +446,6 @@ int accept_agent_side( agent_t *agent, event_info_t *event_info)
 	   exit(1); 
 	}
 
-//	new_client->num_parallel_connections++; 
 
    return EXIT_SUCCESS; 
 }
@@ -444,10 +470,12 @@ int handle_host_connected(agent_t *agent, client_t * client)
 	   		exit(1); 
    	}
 		/* all sockets have been connected go go go!!! */
-		if(client->num_parallel_connections == agent->options.num_parallel_connections
+		//if(client->num_parallel_connections == agent->options.num_parallel_connections
+   
+		if(client->allowed_connections && client->num_parallel_connections == client->allowed_connections
 				&& client->host_fd_poll == IN)
 		{
-			client->client_hash.accept_start.tv_sec -= client->num_parallel_connections +10;
+			client->client_hash.accept_start.tv_sec -= TIMEOUT;
 		}
 
    } 
@@ -465,7 +493,7 @@ int handle_host_connected(agent_t *agent, client_t * client)
 	   		exit(1); 
    	}
       client->host_fd_poll = OFF; 
-      client->client_hash.accept_start.tv_sec -= agent->options.num_parallel_connections +10; 
+      client->client_hash.accept_start.tv_sec -= TIMEOUT; 
    } 
 
 	 
@@ -483,7 +511,7 @@ int connect_host_side(agent_t *agent, client_t *new_client)
 
 	if(!agent->options.nonOF && new_client != NULL)
 	{
-		get_controller_message(&agent->controller); 
+//		get_controller_message(&agent->controller); 
 	}
 
    if(( new_client->host_sock =  socket(AF_INET, SOCK_STREAM, 0)) == -1)
@@ -494,12 +522,12 @@ int connect_host_side(agent_t *agent, client_t *new_client)
    }
    bzero( (void *) &servaddr, sizeof(servaddr)); 
    servaddr.sin_family = AF_INET; 
-	servaddr.sin_addr.s_addr = inet_addr(agent->controller.send_ip);
-   servaddr.sin_port = htons(agent->controller.port); 
+	servaddr.sin_addr.s_addr = inet_addr(new_client->agent_ip);
+   servaddr.sin_port = htons(new_client->agent_port); 
 
    if(agent->options.verbose_level)
    {
-      printf("connecting to server [%s:%d]\n", agent->controller.send_ip, agent->controller.port); 
+      printf("connecting to server [%s:%d]\n", new_client->agent_ip, new_client->agent_port); 
    }
 
 
@@ -541,11 +569,10 @@ int connect_agent_side(agent_t *agent, client_t *new_client)
 
 	bzero( (void *) &servaddr, sizeof(servaddr) ); 
 	servaddr.sin_family = AF_INET; 
-	servaddr.sin_addr.s_addr = inet_addr(agent->controller.send_ip);
+	servaddr.sin_addr.s_addr = inet_addr(new_client->agent_ip);
 
 
-	
-	for(count = 0; count < agent->options.num_parallel_connections; count++) 
+	for(count = 0; count < new_client->allowed_connections; count++) 
 	{
 		if(agent->options.protocol == TCP)
 		{
@@ -640,6 +667,13 @@ int get_uuid(int fd, uuid_t * uuid)
          break;
       }
    }
+
+#ifdef DEBUG
+   char buf[100]; 
+   uuid_unparse(*uuid, buf); 
+   printf("%s\n", buf); 
+#endif 
+
    return EXIT_SUCCESS;   
 }
 
@@ -660,8 +694,14 @@ int get_uuid_and_confirm_client(agent_t *agent, int fd)
          agent->agent_fd_pool[fd]; 
       new_client->agent_fd_poll[new_client->num_parallel_connections] = IN; 
       new_client->num_parallel_connections++; 
-      connect_host_side(agent, new_client); 
+
+		if(check_for_transfer_request(agent, new_client, "AGENT")) {  
+      	connect_host_side(agent, new_client); 
+		}else { 
+         printf("DID NOT FIND!\n");  
+      } 
       new_client->host_fd_poll  = OFF; 
+
    } 
    else 
    { 
@@ -671,10 +711,11 @@ int get_uuid_and_confirm_client(agent_t *agent, int fd)
       client_hash->client->agent_fd_poll[client_hash->client->num_parallel_connections] = IN; 
       client_hash->client->num_parallel_connections++; 
   
-     if(client_hash->client->num_parallel_connections == agent->options.num_parallel_connections 
+//     if(client_hash->client->num_parallel_connections == agent->options.num_parallel_connections 
+     if(client_hash->client->allowed_connections && client_hash->client->num_parallel_connections == client_hash->client->allowed_connections 
          && client_hash->client->host_fd_poll == IN)
      {
-       client_hash->accept_start.tv_sec -= client_hash->client->num_parallel_connections +10; 
+       client_hash->accept_start.tv_sec -=  TIMEOUT; 
      }
    }
 
@@ -695,7 +736,7 @@ int get_uuid_and_confirm_client(agent_t *agent, int fd)
 
 
 
-int  agent_connected_event(agent_t *agent, event_info_t *event_info)
+int agent_connected_event(agent_t *agent, event_info_t *event_info)
 { 
    
 	int optval; 
@@ -707,7 +748,7 @@ int  agent_connected_event(agent_t *agent, event_info_t *event_info)
 	{
   		new_client->num_parallel_connections++; 
 		new_client->agent_fd_poll[event_info->fd] = IN;  
-      send_uuid(new_client->agent_sock[event_info->fd], new_client->client_hash.id); 
+      send_uuid(new_client->agent_sock[event_info->fd], new_client->uuid); 
 	}
 	else 
 	{
@@ -724,11 +765,12 @@ int  agent_connected_event(agent_t *agent, event_info_t *event_info)
 		printf("%s %d\n", __FILE__, __LINE__); 
 		exit(1); 
 	}	
-   if(new_client->num_parallel_connections == agent->options.num_parallel_connections
+//   if(new_client->num_parallel_connections == agent->options.num_parallel_connections
+   if(new_client->allowed_connections && new_client->num_parallel_connections == new_client->allowed_connections 
       && new_client->host_fd_poll == IN)
    { 
 	   //set time back so it will be expired next time time is checked
-	   new_client->client_hash.accept_start.tv_sec -= agent->options.num_parallel_connections + 10; 
+	   new_client->client_hash.accept_start.tv_sec -=   TIMEOUT; 
 
    }
    return EXIT_SUCCESS; 
@@ -760,7 +802,7 @@ client_t * init_new_client(agent_t *agent, uuid_t * uuid)
       exit(1); 
    } 
    new_client->buffered_packet_table = NULL; 
-
+   new_client->allowed_connections = 0; 
 	new_client->agent_sock = calloc(sizeof(int) , agent->options.num_parallel_connections); 
 	new_client->agent_side_event_info = calloc(sizeof(struct event_info_struct) ,agent->options.num_parallel_connections); 
    new_client->send_seq = 0; 

@@ -40,14 +40,27 @@ enum poll_event_types
    AGENT_CONNECTED, 
    AGENT_CONNECTED_UUID, 
    HOST_SIDE_DATA, 
-   AGENT_SIDE_DATA 
+   AGENT_SIDE_DATA, 
+   CONTROLLER_MESSAGE
 }; 
 
 	
+typedef struct transfer_request_struct {
+   char type[80];
+	uuid_t id; 
+   char source_ip[80];
+   unsigned short int source_port;
+   char agent_ip[80];
+   unsigned short int agent_port;
+   unsigned short int allowed_connections;
+   UT_hash_handle hh;
+} transfer_request_t;
+
 
 typedef struct controller_struct
 {
 	int sock; 
+   struct transfer_request_struct * requests; 
 	short int port;
 	char send_ip[INET6_ADDRSTRLEN]; 
 	struct addrinfo *dest; 
@@ -84,6 +97,8 @@ typedef struct listen_fds_struct
    struct epoll_event event_agent;        /* epoll event for agent side          */  
    struct event_info_struct *agent_side_listen_event;  
    struct event_info_struct host_side_listen_event;  
+   struct epoll_event event_controller; 
+   struct event_info_struct controller_message_event;  
 }listen_fds_t; 
 
 typedef struct packet_hash_struct 
@@ -143,6 +158,16 @@ typedef struct client_struct
    int *agent_packet_index_in; 
    int agent_packet_index_out; 
 	int *agent_needed_header_size; 
+   char source_ip[INET6_ADDRSTRLEN]; 
+   unsigned short int source_port; 
+
+	
+	char agent_ip[INET6_ADDRSTRLEN]; 
+	unsigned short int agent_port; 
+
+	unsigned short int  allowed_connections; 
+	uuid_t uuid; 
+
 } client_t; 
 
 
@@ -165,3 +190,5 @@ typedef struct agent_struct
    struct event_info_struct agent_fd_pool_event[MAX_AGENT_CONNECTIONS];  
 
 }agent_t; 
+
+
