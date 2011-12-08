@@ -698,7 +698,9 @@ int get_uuid_and_confirm_client(agent_t *agent, int fd)
 		if(check_for_transfer_request(agent, new_client, "AGENT")) {  
       	connect_host_side(agent, new_client); 
 		}else { 
+#ifdef DEBUG
          printf("DID NOT FIND!\n");  
+#endif
       } 
       new_client->host_fd_poll  = OFF; 
 
@@ -904,7 +906,7 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
          if (errno == ESHUTDOWN || errno == ECONNRESET) 
          {
             
-         printf("Reset23\n"); 
+            printf("Reset23\n"); 
             if(epoll_ctl(event_host->client->client_event_pool, EPOLL_CTL_DEL, 
                event_host->fd, NULL)) 
             {  

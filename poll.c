@@ -114,6 +114,34 @@ int poll_loop(agent_t *agent)
             printf("CONTROLLER_MESSAGE\n"); 
 #endif
             get_controller_message(&agent->controller); 
+
+				/* 
+					Now we should check if there are sockets 
+					that where waiting on this message.
+					 
+				*/
+						
+				for(iter_hash = agent->clients_hashes; iter_hash != NULL; 
+						iter_hash=iter_hash->hh.next) 
+				{
+					if(check_for_transfer_request(agent, iter_hash->client, "CLIENT")) { 
+
+#ifdef DEBUG
+						printf("FOUND client\n"); 
+#endif
+						connect_agent_side(agent, iter_hash->client); 
+					}else if(check_for_transfer_request(agent, iter_hash->client, "AGENT")) { 
+#ifdef DEBUG
+						printf("FOUND agent\n"); 
+#endif
+						connect_host_side(agent, iter_hash->client); 
+	
+					}else { 
+#ifdef DEBUG
+						printf("Nothing in queue\n"); 
+#endif
+					}
+				}
 			} 
          else if(event_info->type ==  HOST_SIDE_CONNECT) 
 			{
