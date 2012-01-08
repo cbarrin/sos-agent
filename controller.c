@@ -123,8 +123,8 @@ int get_controller_message(controller_t *controller)
 	controller->port = ntohs(their_addr.sin_port); 
    */ 
 
-
-   sscanf(buf, "%s %s", transfer->type, uuid_temp); 
+   printf("%s\n", buf); 
+     sscanf(buf, "%s %s", transfer->type, uuid_temp); 
    if(uuid_parse(uuid_temp, transfer->id)) { 
       printf("UUID FAILED TO CONVERT!!\n"); 
    } 
@@ -160,6 +160,7 @@ int  check_for_transfer_request(agent_t *agent, client_t * client, char * type) 
                   iter_hash->source_port == client->source_port)
             {
 
+               printf("%s %s \n", iter_hash->source_ip, client->source_ip); 
                  strcpy(client->agent_ip, iter_hash->agent_ip); 
                  client->allowed_connections = iter_hash->allowed_connections;  
                  uuid_copy(client->uuid, iter_hash->id); 
