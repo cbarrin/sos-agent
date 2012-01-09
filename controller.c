@@ -179,6 +179,7 @@ int  check_for_transfer_request(agent_t *agent, client_t * client, char * type) 
 					// really client port.. 
 					client->agent_port = iter_hash->agent_port; 	
                client->allowed_connections = iter_hash->allowed_connections;  
+					uuid_copy(client->uuid, iter_hash->id); 
 						
 //               HASH_DEL(agent->controller.requests, iter_hash); 
 					free(iter_hash); 
