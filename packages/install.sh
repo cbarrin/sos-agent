@@ -1,5 +1,3 @@
-rpms=`cat packages.txt`
-yum install -y  $rpms
 wget http://130.127.62.2/protobuf-2.4.1.tar.bz2
 wget http://130.127.62.2/protobuf-c-0.15.tar.gz
 echo export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib >> ~/.bashrc

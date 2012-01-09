@@ -137,10 +137,11 @@ int get_controller_message(controller_t *controller)
    }else if(!strcmp(transfer->type, "AGENT")) { 
       sscanf(&buf[strlen("AGENT ") + 36], "%s %hu %hu",
             transfer->agent_ip, &transfer->agent_port, &transfer->allowed_connections); 
+
    }
    
 
-
+	printf("[%d]\n", transfer->allowed_connections); 
 
    HASH_ADD_INT(controller->requests, id, transfer); 
    
@@ -165,7 +166,7 @@ int  check_for_transfer_request(agent_t *agent, client_t * client, char * type) 
                  client->allowed_connections = iter_hash->allowed_connections;  
                  uuid_copy(client->uuid, iter_hash->id); 
                  free(iter_hash); 
-                 HASH_DEL(agent->controller.requests, iter_hash); 
+                 //HASH_DEL(agent->controller.requests, iter_hash); 
                  return TRUE; 
             }
          }
@@ -179,7 +180,7 @@ int  check_for_transfer_request(agent_t *agent, client_t * client, char * type) 
 					client->agent_port = iter_hash->agent_port; 	
                client->allowed_connections = iter_hash->allowed_connections;  
 						
-               HASH_DEL(agent->controller.requests, iter_hash); 
+//               HASH_DEL(agent->controller.requests, iter_hash); 
 					free(iter_hash); 
 					return TRUE; 
             }

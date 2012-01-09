@@ -756,7 +756,7 @@ int agent_connected_event(agent_t *agent, event_info_t *event_info)
 	{
       printf("%d\n", errno); 
 		perror(""); 
-		printf("failed %d\n", event_info->fd); 
+	//	printf("failed %d\n", event_info->fd); 
 	   printf("%s %d\n", __FILE__, __LINE__); 
       //exit(1); 
 	}

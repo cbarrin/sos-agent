@@ -40,6 +40,7 @@ int poll_loop(agent_t *agent)
    struct timeval current_time; 
    accept_start.tv_sec = -1; 
 	client_hash_t *iter_hash; 
+	transfer_request_t *transfer_request_hash=NULL; 
 
 
 	struct epoll_event events; 
@@ -60,8 +61,20 @@ int poll_loop(agent_t *agent)
 			if((  current_time.tv_sec - iter_hash->accept_start.tv_sec)> (TIMEOUT))
 			{
 
-				if(iter_hash->client->num_parallel_connections  != agent->options.num_parallel_connections || iter_hash->client->host_fd_poll == 0) 
+				/*
+				char buf[100]; 
+				uuid_unparse(iter_hash->client->uuid, buf); 
+				printf("%s\n", buf); 
+				*/ 
+
+				HASH_FIND_INT(agent->controller.requests, iter_hash->client->uuid,transfer_request_hash);  
+				if(transfer_request_hash == NULL) { 
+					printf("ERROR did not find transfer requst id\n"); 
+				}
+				else if(iter_hash->client->num_parallel_connections  !=  transfer_request_hash->allowed_connections
+					/*agent->options.num_parallel_connections*/ || iter_hash->client->host_fd_poll == 0) 
 				{ 
+					HASH_DEL(agent->controller.requests, transfer_request_hash);
 					printf("All sockets failed to connected or host socket couldn't connect\n"); 
 				} 
 				else 
@@ -70,6 +83,7 @@ int poll_loop(agent_t *agent)
 					printf("FORKING %d\n", iter_hash->client->host_fd_poll); 
 #endif
 				
+					HASH_DEL(agent->controller.requests, transfer_request_hash);
 					i=fork(); 
 
             	if(i < 0) 
@@ -86,6 +100,7 @@ int poll_loop(agent_t *agent)
 						HASH_DEL(agent->clients_hashes, iter_hash);  	
                	configure_poll(iter_hash->client); 
 						poll_data_transfer(agent, iter_hash->client); 
+
             	}
 				}
 				//parent 
@@ -479,6 +494,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 		} 
       else if(!n_events) 
       {
+			printf("Everything timed out...\n"); 
          free_client(agent, client);         
          clean_up_connections(client); 
          printf("All sockets closed!\n"); 
