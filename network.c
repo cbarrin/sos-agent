@@ -890,13 +890,15 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 	int size, ret; 
 	uint32_t n_size=0; 
    int size_count; 
-	uint8_t buf[MAX_BUFFER]; 
+	//uint8_t buf[MAX_BUFFER]; 
 
-	Packet packet = PACKET__INIT; 
+//	Packet packet = PACKET__INIT; 
 
    if(!event_host->client->packet[event_agent->agent_id].host_packet_size)
    {
-	   if(( size = recv(event_host->fd, buf, sizeof(buf), 0)) == -1) 
+	   if(( size = recv(event_host->fd, 
+			event_host->client->packet[event_agent->agent_id].serialized_data + 2*sizeof(int), 
+			sizeof(event_host->client->packet[event_agent->agent_id].serialized_data) - 2*sizeof(int), 0)) == -1) 
 	   {
 		   if(errno == EAGAIN) { 
 				printf("Eagain?? %d\n", event_agent->agent_id); 
@@ -938,21 +940,29 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 
          return CLOSE; 
 	   }
-	   serialize_packet(&packet, event_host, buf, (size_t)size, 
-         (uint8_t *)&event_host->client->packet[event_agent->agent_id].serialized_data[sizeof(size)]); 
+//	   serialize_packet(&packet, event_host, buf, (size_t)size, 
+//        (uint8_t *)&event_host->client->packet[event_agent->agent_id].serialized_data[sizeof(size)]); 
 
-	   size = packet__get_packed_size(&packet); 
+
+		
+	   //size = packet__get_packed_size(&packet); 
+/*
       if(size > MAX_BUFFER*2) { 
       
          printf("AHH SIZE %d!!!\n", size); 
          exit(1); 
       } 
+*/ 
 
 	   /* send size of data and then serialized data */
-      n_size = htonl(size);  
-      memcpy(&event_host->client->packet[event_agent->agent_id].serialized_data, &n_size, sizeof(size)); 
-       
-      size +=sizeof(size);  
+      n_size = htonl(size + sizeof(int));  
+      memcpy(event_host->client->packet[event_agent->agent_id].serialized_data, &n_size, sizeof(size)); 
+      memcpy(event_host->client->packet[event_agent->agent_id].serialized_data + sizeof(int), &event_host->client->send_seq, sizeof(int)); 
+//      printf("%d %d\n", (int)*(event_host->client->packet[event_agent->agent_id].serialized_data +sizeof(int)), event_host->client->send_seq); 
+		event_host->client->send_seq++; 
+//      printf("test === %d %d\n",(int) event_host->client->packet[event_agent->agent_id].serialized_data, size) ; 
+      //size +=sizeof(size);  
+		size += sizeof(int) *2; 
       event_host->client->packet[event_agent->agent_id].host_packet_size =  size; 
       size_count = 0; 
 
@@ -1206,6 +1216,8 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
          {
 		      size_count +=size; 
          }
+//      printf("%d this is the size %d \n",  event->client->header_size[event->agent_id], ntohl(event->client->header_size[event->agent_id])); 
+
 		   if(size_count == sizeof(uint32_t))
 		   {
 				event->client->agent_needed_header_size[event->agent_id] = 0;	
@@ -1280,25 +1292,30 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 		{
          event->client->agent_packet_queue_count[event->agent_id]++;  
          event->client->agent_packet_index_in[event->agent_id] = EMPTY; 
-         event->client->buffered_packet[event->agent_id][packet_index].size = 0; 
+      //   event->client->buffered_packet[event->agent_id][packet_index].size = 0; 
 			break;
 		}
 	}
 
-  event->client->buffered_packet[event->agent_id][packet_index].packet = packet__unpack(NULL, 
-      packet_size, event->client->buffered_packet[event->agent_id][packet_index].serialized_data);   
+//  event->client->buffered_packet[event->agent_id][packet_index].packet = packet__unpack(NULL, 
+ //     packet_size, event->client->buffered_packet[event->agent_id][packet_index].serialized_data);   
 
+	
+	memcpy(&event->client->buffered_packet[event->agent_id][packet_index].seq_num, 
+      event->client->buffered_packet[event->agent_id][packet_index].serialized_data,  sizeof(int)); 
 
+	/*
 	if(event->client->buffered_packet[event->agent_id][packet_index].packet == NULL)  
    {
 		printf("protobuf error\n"); 
       exit(1); 
 	} 
+	*/ 
 
 
    agent_id = event->agent_id; 
 #ifdef DEBUG
-   printf("got %d--- %d\n", event->client->buffered_packet[agent_id][packet_index].packet->seq_num, event->client->recv_seq); 
+   printf("got %d--- %d\n", event->client->buffered_packet[agent_id][packet_index].seq_num, event->client->recv_seq); 
 #endif
    
 
@@ -1332,7 +1349,7 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
             event->client->agent_fd_poll[agent_id] = OFF; 
          }
       } 
-      if(event->client->recv_seq == event->client->buffered_packet[agent_id][packet_index].packet->seq_num) 
+      if(event->client->recv_seq == event->client->buffered_packet[agent_id][packet_index].seq_num) 
       {
             event->client->agent_packet_index_out = packet_index; 
 		      send_data_host(agent, event, 0); 
@@ -1343,7 +1360,7 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
             event->client->buffered_packet[event->agent_id][packet_index].agent_id =  event->agent_id; 
             event->client->buffered_packet[event->agent_id][packet_index].packet_index =  packet_index; 
 	         event->client->buffered_packet[event->agent_id][packet_index].id = 
-            event->client->buffered_packet[event->agent_id][packet_index].packet->seq_num; 
+            event->client->buffered_packet[event->agent_id][packet_index].seq_num; 
    	      HASH_ADD_INT(event->client->buffered_packet_table, id, (&event->client->buffered_packet[event->agent_id][packet_index])); 
       }
 
@@ -1401,8 +1418,9 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 		while(1) 
 		{
 			size = send(event->client->host_sock,(uint8_t *) 
-            event->client->buffered_packet[agent_id][packet_index].packet->payload.data + size_count,  
-     		event->client->buffered_packet[agent_id][packet_index].packet->payload.len - size_count, 0);  
+            //event->client->buffered_packet[agent_id][packet_index].packet->payload.data + size_count,  
+            event->client->buffered_packet[agent_id][packet_index].serialized_data +sizeof(int) + size_count,  
+     		event->client->buffered_packet[agent_id][packet_index].size -sizeof(int) - size_count, 0);  
 
 			if(size == -1) 
 			{ 
@@ -1479,10 +1497,10 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 			{
 				size_count +=size; 
 			}
-			if(size_count == event->client->buffered_packet[agent_id][packet_index].packet->payload.len)
+			if(size_count == event->client->buffered_packet[agent_id][packet_index].size - sizeof(int))
 			{
 
-				packet__free_unpacked(event->client->buffered_packet[agent_id][packet_index].packet, NULL); 
+				//packet__free_unpacked(event->client->buffered_packet[agent_id][packet_index].packet, NULL); 
 #ifdef DEBUG
             printf("sent %d packet_index %d agent %d\n", event->client->recv_seq, packet_index, agent_id); 
 #endif 
