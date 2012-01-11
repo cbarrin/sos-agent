@@ -95,9 +95,9 @@ int poll_loop(agent_t *agent)
             	{ 
 						printf("NEW client agent side connect\n"); 
                	printf("%d parallel sockets accepted\n", iter_hash->client->num_parallel_connections); 
-               	close_listener_sockets(agent); 
-						clean_up_unconnected_parallel_sockets(agent, iter_hash->client); 
-						HASH_DEL(agent->clients_hashes, iter_hash);  	
+  //             	close_listener_sockets(agent); 
+	//					clean_up_unconnected_parallel_sockets(agent, iter_hash->client); 
+	//					HASH_DEL(agent->clients_hashes, iter_hash);  	
                	configure_poll(iter_hash->client); 
 						poll_data_transfer(agent, iter_hash->client); 
 
