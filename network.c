@@ -1213,7 +1213,6 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
                }
 				event->client->agent_fd_poll[event->agent_id] = CLOSED; 
          	event->client->buffered_packet[event->agent_id][packet_index].in_use = 0; 
-				printf("MEMEME CLOSED!!! %d\n", event->agent_id); 
             return CLOSE; 
          }
          else if(size > 0) 
