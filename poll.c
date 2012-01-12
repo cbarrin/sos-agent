@@ -254,6 +254,7 @@ int all_agents_socks_full(agent_t *agent, client_t *client)
 	} 
 	else 
 	{ 
+	
 		printf("unknown bad %s %d\n", __FILE__, __LINE__); 	
 		//exit(1); 
 	} 
@@ -339,7 +340,7 @@ int not_all_agent_socks_full(agent_t *agent, client_t * client)
 	else 
 	{ 
 		printf("unknown bad %d\n", client->host_fd_poll); 	
-		exit(1); 
+	//exit(1); 
 	} 
 
 	/* now we need to remove POLLOUT on all agent socks */ 
@@ -387,10 +388,60 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 	int n_events; 
 	int timeout = 10000; 
 	struct epoll_event event;
+	int host_socket_closed = 0; 
+	int i,j ; 
+	int all_closed = 0; 
 
+		
 
 	while(1) 
 	{
+
+		/* we want to go through parallel sockets 
+		 * and check if they have data. If not close them 
+		 */
+		
+		if(client->host_fd_poll == CLOSED) { 
+			all_closed = 1; 
+			for(i = 0; i < client->num_parallel_connections; i++) { 
+				if(!client->packet[i].host_packet_size) { 
+					close(client->agent_sock[i]); 
+					client->agent_fd_poll[i] = CLOSED; 	
+				}else if(client->agent_fd_poll[i] != CLOSED) { 
+					all_closed = 0; 
+				}
+			}
+		}else {
+			all_closed = 1; 
+			for(i = 0; i < client->num_parallel_connections; i++) { 
+				if(client->agent_fd_poll[i] != CLOSED) { 
+					all_closed = 0; 
+					break; 
+				}
+			}
+			if(all_closed)  { 
+//				printf("looks good so far...\n"); 
+
+				for(i = 0; i < client->num_parallel_connections; i++) { 
+					for(j = 0; j < MAX_QUEUE_SIZE; j++) { 
+						if(client->buffered_packet[i][j].in_use) { 
+							all_closed = 0 ; 
+//							printf("FAILED %d %d\n", i, j); 
+						}
+					}
+				}
+			}
+			if(all_closed) { 
+				close(client->host_sock);
+			}
+		}
+		if(all_closed) { 
+			printf("Everything has been closed!\n"); 
+			exit(1); 
+		}
+
+
+
 		n_events = epoll_wait(client->client_event_pool, &event, 1, timeout); 
 	
 		if(n_events < 0) 
@@ -423,6 +474,8 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 #endif 
 					if(read_host_send_agent(agent, event_info_host, event_info_agent) == CLOSE) 
                {
+						printf("returned a closed\n"); 
+						host_socket_closed = 1; 
                   timeout = 1000; 
                }  
 				}
@@ -452,6 +505,8 @@ int poll_data_transfer(agent_t *agent, client_t * client)
  
 				if(read_host_send_agent(agent, &event_info_host->client->host_side_event_info, event_info_host)== CLOSE)
             {
+						printf("returned a closed\n"); 
+					host_socket_closed = 1; 
                timeout = 1000; 
             } 
 			}
@@ -495,6 +550,17 @@ int poll_data_transfer(agent_t *agent, client_t * client)
       else if(!n_events) 
       {
 			printf("Everything timed out...\n"); 
+				for(i = 0; i < client->num_parallel_connections; i++) { 
+					for(j = 0; j < MAX_QUEUE_SIZE; j++) { 
+						if(client->buffered_packet[i][j].in_use) { 
+							all_closed = 0 ; 
+							printf("FAILED %d %d\n", i, j); 
+						}
+					}
+				}
+
+
+
          free_client(agent, client);         
          clean_up_connections(client); 
          printf("All sockets closed!\n"); 

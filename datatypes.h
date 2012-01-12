@@ -6,6 +6,7 @@
 #define INAndOut 3
 #define EMPTY -1
 #define FULL -2
+#define CLOSED 4
 
 
 

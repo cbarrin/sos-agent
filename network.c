@@ -916,7 +916,7 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 			      printf("%s %d\n", __FILE__, __LINE__); 
 			      exit(1); 	
             }
-           event_host->client->host_fd_poll = OFF; 
+           event_host->client->host_fd_poll = CLOSED; 
            return CLOSE; 
          }
            
@@ -934,7 +934,7 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 					printf("%s %d\n", __FILE__, __LINE__); 
                exit(1); 
             }
-            event_host->client->host_fd_poll = OFF; 
+            event_host->client->host_fd_poll = CLOSED; 
          } 
          else { printf("LKJLKJL!!!!!!!!!!!!\n");  } 
 
@@ -1174,7 +1174,8 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 			      printf("%s %d\n", __FILE__, __LINE__); 
 			      exit(1); 	
              }
-               event->client->host_fd_poll = OFF; 
+//               event->client->host_fd_poll = OFF; 
+            	event->client->agent_fd_poll[event->agent_id] = CLOSED; 
                close(event->fd); 
                return CLOSE; 
             }
@@ -1210,6 +1211,9 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 						printf("%s %d\n", __FILE__, __LINE__); 
             		exit(1); 
                }
+				event->client->agent_fd_poll[event->agent_id] = CLOSED; 
+         	event->client->buffered_packet[event->agent_id][packet_index].in_use = 0; 
+				printf("MEMEME CLOSED!!! %d\n", event->agent_id); 
             return CLOSE; 
          }
          else if(size > 0) 
@@ -1283,8 +1287,9 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 					printf("%s %d\n", __FILE__, __LINE__); 
            		exit(1); 
             }
-            event->client->agent_fd_poll[event->agent_id] = OFF; 
+        //    event->client->agent_fd_poll[event->agent_id] = OFF; 
          }
+         event->client->agent_fd_poll[event->agent_id] = CLOSED; 
          return CLOSE; 
 
       }
@@ -1482,7 +1487,8 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 			            printf("%s %d\n", __FILE__, __LINE__); 
 			            exit(1); 	
                   }
-                  event->client->host_fd_poll = OFF; 
+                  event->client->host_fd_poll = CLOSED; 
+						close(event->client->host_sock); 
                   
                  return CLOSE; 
                }
@@ -1506,7 +1512,7 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 #endif 
             event->client->agent_packet_queue_count[agent_id]--;   
             event->client->buffered_packet[agent_id][packet_index].size = 0; 
-            event->client->buffered_packet[agent_id][packet_index].in_use = 0 ; 
+            event->client->buffered_packet[agent_id][packet_index].in_use = 0; 
 				event->client->recv_seq++; 
          
             if(!(event->client->agent_fd_poll[agent_id]&IN))
@@ -1538,7 +1544,8 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
                   } 
                   event->client->agent_fd_poll[agent_id] = IN; 
                }
-               else { printf("kjkjkj\n"); exit(1); } 
+               //else { printf("kjkjkj\n"); exit(1); } 
+
 
             }
 
