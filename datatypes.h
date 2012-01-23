@@ -110,10 +110,8 @@ typedef struct packet_hash_struct
 	int size; 
    uint8_t need_header_size; 
    int packet_index; 
-//	uint8_t serialized_data[MAX_BUFFER *2]; 
 	uint8_t *serialized_data; 
 	int seq_num; 
-	//Packet *packet;
    char in_use; 
 	UT_hash_handle hh; 
 }packet_hash_t; 

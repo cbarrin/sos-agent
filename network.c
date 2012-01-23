@@ -851,62 +851,9 @@ client_t * init_new_client(agent_t *agent, uuid_t * uuid)
    new_client->send_seq = 0; 
    new_client->recv_seq = 0; 
 
-	/* 
-	new_client->header_size = malloc(sizeof(uint32_t) * agent->options.num_parallel_connections); 
-   new_client->buffered_packet = malloc(sizeof(packet_hash_t *) * agent->options.num_parallel_connections); 
-   new_client->agent_packet_index_in = malloc(sizeof(int) *agent->options.num_parallel_connections); 
-	*/ 
 
    new_client->agent_fd_poll = calloc(sizeof(char) , agent->options.num_parallel_connections); 
    new_client->num_parallel_connections = 0; 
-
-/*  
-   new_client->agent_packet_queue_count =  malloc(sizeof(int)*agent->options.num_parallel_connections); 
-	new_client->agent_needed_header_size = malloc(sizeof(int)*agent->options.num_parallel_connections); 
-
-//   new_client->packet =  malloc(sizeof(serialized_data_t) * agent->options.num_parallel_connections);  
-
-	if(new_client->agent_sock == NULL ||  
-//      new_client->buffered_packet == NULL || 
-      new_client->agent_fd_poll == NULL || 
-      new_client->agent_packet_index_in == NULL ||  
-      new_client->header_size == NULL ||  
-      new_client->agent_needed_header_size == NULL ||  
-      new_client->agent_packet_queue_count == NULL || 
- //     new_client->packet == NULL || 
-      new_client->agent_side_event_info == NULL )
-	{
-		printf("Failed to malloc new client!\n"); 
-		return NULL; 
-	}
-
-
-	for(i = 0; i < agent->options.num_parallel_connections; i++)
-	{
-		
-      new_client->buffered_packet[i] = malloc(sizeof(packet_hash_t) *MAX_QUEUE_SIZE);  
-//		new_client->packet[i].serialized_data = malloc(sizeof(uint8_t) * 1024); 
-      if(new_client->buffered_packet[i] == NULL) 
-      {
-         printf("malloc failed\n"); 
-         exit(1); 
-      } 
-      new_client->agent_packet_queue_count[i] = 0; 
-//		new_client->packet[i].host_packet_size = 0; 	
-      new_client->agent_packet_index_in[i] = EMPTY; 
-		new_client->agent_needed_header_size[i] = 0; 
-      for(j = 0; j < MAX_QUEUE_SIZE; j++) 
-      { 
-			new_client->buffered_packet[i][j].serialized_data = malloc(sizeof(uint8_t) *1024); 
-         new_client->buffered_packet[i][j].size = EMPTY ; 
-         new_client->buffered_packet[i][j].in_use = 0 ; 
-//         new_client->buffered_packet[i][j].need_header_size = 0 ; 
-      } 
-	} 
-
-
-	*/ 
-
 
 
    new_client->client_hash.client =  new_client; 
@@ -943,16 +890,13 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 	int size, ret; 
 	uint32_t n_size=0; 
    int size_count; 
-	//uint8_t buf[MAX_BUFFER]; 
 
-//	Packet packet = PACKET__INIT; 
 
    if(!event_host->client->packet[event_agent->agent_id].host_packet_size)
    {
 	   if(( size = recv(event_host->fd, 
 			event_host->client->packet[event_agent->agent_id].serialized_data + 2*sizeof(int), 
 			event_host->client->transfer_request->buffer_size - 2*sizeof(int), 0)) == -1) 
-			//sizeof(event_host->client->packet[event_agent->agent_id].serialized_data) - 2*sizeof(int), 0)) == -1) 
 	   {
 		   if(errno == EAGAIN) { 
 				printf("Eagain?? %d\n", event_agent->agent_id); 
