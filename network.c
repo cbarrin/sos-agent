@@ -1671,7 +1671,7 @@ void getinfo(client_t *client) {
 
 	printf(" i, sent_bytes, recv_bytes, sent_packets, recv_packets\n"); 
 	for(i = 0; i < client->num_parallel_connections; i++) { 
-		printf("%d %" PRIu64 "%" PRIu64 "%" PRIu64 "%" PRIu64"\n", i, client->stats.sent_bytes[i], client->stats.recv_bytes[i], 
+		printf("%d % " PRIu64 " % " PRIu64 " % " PRIu64 " % " PRIu64 "\n", i, client->stats.sent_bytes[i], client->stats.recv_bytes[i], 
 				client->stats.sent_packets[i], client->stats.recv_packets[i]); 
 	}
 
