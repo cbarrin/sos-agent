@@ -1665,13 +1665,13 @@ void getinfo(client_t *client) {
 	printf("num_connections: %d\n", client->transfer_request->allowed_connections); 
 	printf("buffer_size: %d\n", client->transfer_request->buffer_size); 
 	printf("queue_size: %d\n", client->transfer_request->queue_size); 
-	printf("total_sent_bytes: %lu \n", client->stats.total_sent_bytes); 
-	printf("total_recv_bytes: %lu \n", client->stats.total_recv_bytes); 
+	printf("total_sent_bytes: %" PRIu64 "\n", client->stats.total_sent_bytes); 
+	printf("total_recv_bytes: %" PRIu64 "\n", client->stats.total_recv_bytes); 
 
 
 	printf(" i, sent_bytes, recv_bytes, sent_packets, recv_packets\n"); 
 	for(i = 0; i < client->num_parallel_connections; i++) { 
-		printf("%d %lu %lu %lu %lu\n", i, client->stats.sent_bytes[i], client->stats.recv_bytes[i], 
+		printf("%d %" PRIu64 "%" PRIu64 "%" PRIu64 "%" PRIu64"\n", i, client->stats.sent_bytes[i], client->stats.recv_bytes[i], 
 				client->stats.sent_packets[i], client->stats.recv_packets[i]); 
 	}
 
