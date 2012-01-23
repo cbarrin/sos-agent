@@ -31,10 +31,46 @@
 
 
 
+
+int configure_stats(client_t * client) { 
+	int i ; 
+	client->stats.total_sent_bytes = 0;
+	client->stats.total_recv_bytes = 0;
+	client->stats.sent_bytes = malloc(sizeof(uint64_t) *client->num_parallel_connections);
+	client->stats.recv_bytes = malloc(sizeof(uint64_t) *client->num_parallel_connections);
+	client->stats.sent_packets = malloc(sizeof(uint64_t) *client->num_parallel_connections);
+	client->stats.recv_packets = malloc(sizeof(uint64_t) *client->num_parallel_connections);
+
+	if(client->stats.sent_bytes == NULL) { 
+		printf("Malloc failed\n"); 
+		exit(1); 
+	}
+	if(client->stats.recv_bytes == NULL) { 
+		printf("Malloc failed\n"); 
+		exit(1); 
+	}
+	if(client->stats.sent_packets == NULL) { 
+		printf("Malloc failed\n"); 
+		exit(1); 
+	}
+	if(client->stats.recv_packets == NULL) { 
+		printf("Malloc failed\n"); 
+		exit(1); 
+	}
+
+
+	for(i = 0; i < client->num_parallel_connections; i++) { 
+		client->stats.sent_bytes[i] = 0 ; 
+		client->stats.recv_bytes[i] = 0 ; 
+		client->stats.sent_packets[i] = 0 ; 
+		client->stats.recv_packets[i] = 0 ; 
+	}
+	return EXIT_SUCCESS;
+}
+
 int configure_poll(client_t * client)
 {
 	int i, j; 
-
 	client->header_size = malloc(sizeof(uint32_t) * client->num_parallel_connections); 
   	client->buffered_packet = malloc(sizeof(packet_hash_t *) * client->num_parallel_connections); 
    client->agent_packet_index_in = malloc(sizeof(int) *client->num_parallel_connections); 
@@ -938,21 +974,11 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 
          return CLOSE; 
 	   }
-//		printf("Size is %d\n", size); 
-//	   serialize_packet(&packet, event_host, buf, (size_t)size, 
-//        (uint8_t *)&event_host->client->packet[event_agent->agent_id].serialized_data[sizeof(size)]); 
+		/*STATS UPDATE */ 
 
 
-		
-	   //size = packet__get_packed_size(&packet); 
-/*
-      if(size > MAX_BUFFER*2) { 
-      
-         printf("AHH SIZE %d!!!\n", size); 
-         exit(1); 
-      } 
-*/ 
 
+		event_host->client->stats.total_recv_bytes +=size; 
 	   /* send size of data and then serialized data */
       n_size = htonl(size + sizeof(int));  
       memcpy(event_host->client->packet[event_agent->agent_id].serialized_data, &n_size, sizeof(size)); 
@@ -964,6 +990,10 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 		size += sizeof(int) *2; 
       event_host->client->packet[event_agent->agent_id].host_packet_size =  size; 
       size_count = 0; 
+
+//		event_host->client->stats.total_recv_bytes +=size -sizeof(int)*2; 
+		event_host->client->stats.sent_bytes[event_agent->agent_id] +=  size; 
+		event_host->client->stats.sent_packets[event_agent->agent_id]++; 
 
    } 
    else 
@@ -1235,6 +1265,10 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
          printf("PACKET_SIZE 0 ??? \n"); 
          exit(1); 
       } 
+
+		/* UPDATE STATS */ 
+		event->client->stats.recv_packets[event->agent_id]++; 
+		event->client->stats.recv_bytes[event->agent_id] +=  sizeof(uint32_t) + packet_size;  
       event->client->buffered_packet[event->agent_id][packet_index].size = packet_size; 
 
       //if(packet_size > sizeof(event->client->buffered_packet[event->agent_id][packet_index].serialized_data))  /* FIX ME */
@@ -1508,6 +1542,7 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 			if(size_count == event->client->buffered_packet[agent_id][packet_index].size - sizeof(int))
 			{
 
+				event->client->stats.total_sent_bytes += size_count; 	
 				//packet__free_unpacked(event->client->buffered_packet[agent_id][packet_index].packet, NULL); 
 #ifdef DEBUG
             printf("sent %d packet_index %d agent %d\n", event->client->recv_seq, packet_index, agent_id); 
@@ -1625,4 +1660,20 @@ int free_client(agent_t *agent, client_t * client)
 	return EXIT_SUCCESS; 
 }
 
+void getinfo(client_t *client) { 
+	int i ; 
+	printf("num_connections: %d\n", client->transfer_request->allowed_connections); 
+	printf("buffer_size: %d\n", client->transfer_request->buffer_size); 
+	printf("queue_size: %d\n", client->transfer_request->queue_size); 
+	printf("total_sent_bytes: %lu \n", client->stats.total_sent_bytes); 
+	printf("total_recv_bytes: %lu \n", client->stats.total_recv_bytes); 
 
+
+	printf(" i, sent_bytes, recv_bytes, sent_packets, recv_packets\n"); 
+	for(i = 0; i < client->num_parallel_connections; i++) { 
+		printf("%d %lu %lu %lu %lu\n", i, client->stats.sent_bytes[i], client->stats.recv_bytes[i], 
+				client->stats.sent_packets[i], client->stats.recv_packets[i]); 
+	}
+
+
+}

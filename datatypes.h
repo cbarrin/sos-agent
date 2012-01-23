@@ -133,6 +133,16 @@ typedef struct serialized_data_struct
 } serialized_data_t; 
 
 
+
+typedef struct stats_struct{ 
+	uint64_t total_sent_bytes; 
+	uint64_t total_recv_bytes; 
+	uint64_t *sent_bytes;
+	uint64_t *recv_bytes; 
+	uint64_t *sent_packets;
+	uint64_t *recv_packets; 
+}stats_t; 
+
 typedef struct client_struct 
 {
    struct client_hash_struct client_hash; 
@@ -140,7 +150,6 @@ typedef struct client_struct
 	struct packet_hash_struct **buffered_packet; 
    int send_seq; 
    int recv_seq; 
-
 
 	uint32_t *header_size; 
    int client_event_pool; 
@@ -170,6 +179,7 @@ typedef struct client_struct
 	unsigned short int  allowed_connections; 
 	uuid_t uuid; 
 	struct transfer_request_struct *transfer_request ;
+	struct stats_struct stats;
 
 } client_t; 
 

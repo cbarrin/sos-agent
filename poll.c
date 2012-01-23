@@ -98,6 +98,7 @@ int poll_loop(agent_t *agent)
   //             	close_listener_sockets(agent); 
 	//					clean_up_unconnected_parallel_sockets(agent, iter_hash->client); 
 	//					HASH_DEL(agent->clients_hashes, iter_hash);  	
+						configure_stats(iter_hash->client); 
                	configure_poll(iter_hash->client); 
 						poll_data_transfer(agent, iter_hash->client); 
 
@@ -439,6 +440,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 		}
 		if(all_closed) { 
 			printf("Everything has been closed!\n"); 
+			getinfo(client); 
 			exit(1); 
 		}
 
