@@ -54,6 +54,8 @@ typedef struct transfer_request_struct {
    char agent_ip[80];
    unsigned short int agent_port;
    unsigned short int allowed_connections;
+	int buffer_size; 
+	int queue_size; 
    UT_hash_handle hh;
 } transfer_request_t;
 
@@ -67,8 +69,6 @@ typedef struct controller_struct
 	struct addrinfo *dest; 
 	char controller_info[MAX_BUFFER]; 
 } controller_t; 
-
-
 
 
 typedef  struct options_struct 
@@ -110,7 +110,8 @@ typedef struct packet_hash_struct
 	int size; 
    uint8_t need_header_size; 
    int packet_index; 
-	uint8_t serialized_data[MAX_BUFFER *2]; 
+//	uint8_t serialized_data[MAX_BUFFER *2]; 
+	uint8_t *serialized_data; 
 	int seq_num; 
 	//Packet *packet;
    char in_use; 
@@ -127,7 +128,8 @@ typedef struct client_hash_struct
 
 typedef struct serialized_data_struct 
 {
-   uint8_t serialized_data[MAX_BUFFER *2]; 
+  // uint8_t serialized_data[MAX_BUFFER *2]; 
+   uint8_t *serialized_data; 
    int host_packet_size; 
    int host_sent_size; 
 } serialized_data_t; 
@@ -169,6 +171,7 @@ typedef struct client_struct
 
 	unsigned short int  allowed_connections; 
 	uuid_t uuid; 
+	struct transfer_request_struct *transfer_request ;
 
 } client_t; 
 

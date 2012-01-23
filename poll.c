@@ -274,7 +274,8 @@ int all_agents_socks_full(agent_t *agent, client_t *client)
 					client->agent_sock[i], &client->event))
 				{
 					perror(""); 
-					printf("%s %d\n", __FILE__, __LINE__); 
+
+					printf("%s %d %d\n", __FILE__, __LINE__, i ); 
 					exit(1); 
 				} 
 				client->agent_fd_poll[i] = INAndOut; 
@@ -386,12 +387,13 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 {
 
 	int n_events; 
-	int timeout = 10000; 
+	int timeout = -1; 
 	struct epoll_event event;
 	int host_socket_closed = 0; 
 	int i,j ; 
 	int all_closed = 0; 
 
+	printf("IN main poll loop\n"); 
 		
 
 	while(1) 
@@ -476,7 +478,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
                {
 						printf("returned a closed\n"); 
 						host_socket_closed = 1; 
-                  timeout = 1000; 
+                  //timeout = 1000; 
                }  
 				}
 				else
@@ -507,7 +509,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
             {
 						printf("returned a closed\n"); 
 					host_socket_closed = 1; 
-               timeout = 1000; 
+               //timeout = 1000; 
             } 
 			}
 			else if (event_info_host->type == AGENT_SIDE_DATA && event.events & EPOLLIN)
@@ -517,7 +519,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 #endif
 				if(read_agent_send_host(agent, event_info_host) == CLOSE)
             {
-               timeout = 1000; 
+              // timeout = 1000; 
             } 
 
 			}
@@ -528,7 +530,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 #endif
 				if(send_data_host(agent,event_info_host, 1) == CLOSE) 
             {
-               timeout = 1000; 
+               //timeout = 1000; 
             } 
 			}
 			else 
@@ -547,6 +549,7 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 			}
 
 		} 
+		/*
       else if(!n_events) 
       {
 			printf("Everything timed out...\n"); 
@@ -559,13 +562,12 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 					}
 				}
 
-
-
          free_client(agent, client);         
          clean_up_connections(client); 
          printf("All sockets closed!\n"); 
          exit(1); 
       } 
+	*/
 	}
 	return EXIT_SUCCESS; 
 }
