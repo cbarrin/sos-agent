@@ -12,7 +12,7 @@ class Tc:
             print "You must be root!"
             sys.exit(1)
 
-        self.hosts=[["127.0.0.1", "10.0.0.13"],["hawk", '10.0.0.12']]
+        self.hosts=[["127.0.0.1", "10.0.0.13/32"],["pg46", '10.0.0.12/32']]
         self.INTERFACE="eth1"
         if sys.argv[1] == "del":
             self.clear()
@@ -20,8 +20,9 @@ class Tc:
 
         self.DELAY = sys.argv[1]
         self.DELTA = sys.argv[2]
+	self.STREAMS = int(sys.argv[3])
         self.gbps = 134217728
-        self.LIMIT = str(int(math.ceil((float(self.DELAY.split("ms")[0]) + float(self.DELTA.split("ms")[0]))*.001 *self.gbps)))
+        self.LIMIT = str(int(math.ceil(self.STREAMS*(float(self.DELAY.split("ms")[0]) + float(self.DELTA.split("ms")[0]))*.001 *self.gbps)))
                 
 
     def clear(self):
@@ -33,6 +34,7 @@ class Tc:
         """"
         First we delete the all the tc stuff incase it's there... 
         """ 
+	print self.LIMIT
         self.clear()
         for i in self.hosts:
             print i
