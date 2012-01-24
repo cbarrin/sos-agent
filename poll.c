@@ -209,6 +209,8 @@ int poll_loop(agent_t *agent)
 #endif
             send_discovery_message(&agent->discovery); 
          }
+			waitpid((pid_t) -1, NULL, WNOHANG); 
+				
       }
 
 	}
