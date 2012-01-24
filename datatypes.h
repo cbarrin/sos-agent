@@ -135,6 +135,7 @@ typedef struct serialized_data_struct
 
 
 typedef struct stats_struct{ 
+   struct timeval start, end; 
 	uint64_t total_sent_bytes; 
 	uint64_t total_recv_bytes; 
 	uint64_t *sent_bytes;
