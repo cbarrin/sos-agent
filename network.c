@@ -1668,14 +1668,14 @@ void getinfo(client_t *client) {
 	double elapsed; 
 	gettimeofday(&client->stats.end, NULL); 
 
-	elapsed = ((client->stats.end.tv_sec * 1000000 + client->stats.end.tv_usec)
-			  - (client->stats.start.tv_sec * 1000000 + client->stats.start.tv_usec));
+	elapsed = (client->stats.end.tv_sec + client->stats.end.tv_usec/1000000.0) - (client->stats.start.tv_sec + client->stats.start.tv_usec/1000000.0); 
 	printf("num_connections: %d\n", client->transfer_request->allowed_connections); 
 	printf("buffer_size: %d\n", client->transfer_request->buffer_size); 
 	printf("queue_size: %d\n", client->transfer_request->queue_size); 
 	printf("total_sent_bytes: %" PRIu64 "\n", client->stats.total_sent_bytes); 
 	printf("total_recv_bytes: %" PRIu64 "\n", client->stats.total_recv_bytes); 
 
+	printf("elapsed %lf\n", elapsed); 
 	printf("sent %lf bytes/sec\n", client->stats.total_sent_bytes/elapsed);
 	printf("recv %lf bytes/sec\n", client->stats.total_recv_bytes/elapsed);
 
