@@ -428,7 +428,8 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 //				printf("looks good so far...\n"); 
 
 				for(i = 0; i < client->num_parallel_connections; i++) { 
-					for(j = 0; j < MAX_QUEUE_SIZE; j++) { 
+					for(j = 0; j < client->transfer_request->queue_size; j++) { 
+					//for(j = 0; j < MAX_QUEUE_SIZE; j++) { 
 						if(client->buffered_packet[i][j].in_use) { 
 							all_closed = 0 ; 
 //							printf("FAILED %d %d\n", i, j); 

@@ -1135,7 +1135,8 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 int get_free_packet_index(agent_t * agent, event_info_t * event)
 {
    int i; 
-   for(i = 0; i < MAX_QUEUE_SIZE; i++) 
+   //for(i = 0; i < MAX_QUEUE_SIZE; i++) 
+   for(i = 0; i < event->client->transfer_request->queue_size; i++) 
    {
       if(event->client->buffered_packet[event->agent_id][i].in_use == 0)  
       {  
@@ -1363,7 +1364,8 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 #endif
    
 
-      if(event->client->agent_packet_queue_count[event->agent_id] == MAX_QUEUE_SIZE)
+      //if(event->client->agent_packet_queue_count[event->agent_id] == MAX_QUEUE_SIZE)
+      if(event->client->agent_packet_queue_count[event->agent_id] == event->client->transfer_request->queue_size)
       { 
 #ifdef DEBUG
        printf("del %d\n", agent_id); 
