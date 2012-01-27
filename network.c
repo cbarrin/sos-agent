@@ -40,6 +40,7 @@ int configure_stats(client_t * client) {
 	client->stats.recv_bytes = malloc(sizeof(uint64_t) *client->num_parallel_connections);
 	client->stats.sent_packets = malloc(sizeof(uint64_t) *client->num_parallel_connections);
 	client->stats.recv_packets = malloc(sizeof(uint64_t) *client->num_parallel_connections);
+	client->stats.average_queue_length = malloc(sizeof(unsigned int) *client->num_parallel_connections); 
 
 	if(client->stats.sent_bytes == NULL) { 
 		printf("Malloc failed\n"); 
@@ -57,6 +58,10 @@ int configure_stats(client_t * client) {
 		printf("Malloc failed\n"); 
 		exit(1); 
 	}
+	if(client->stats.average_queue_length == NULL) { 
+		printf("malloc failed\n"); 
+		exit(1); 
+	}
 
 
 	for(i = 0; i < client->num_parallel_connections; i++) { 
@@ -64,6 +69,7 @@ int configure_stats(client_t * client) {
 		client->stats.recv_bytes[i] = 0 ; 
 		client->stats.sent_packets[i] = 0 ; 
 		client->stats.recv_packets[i] = 0 ; 
+		client->stats.average_queue_length[i] = 0; 
 	}
 	
 	gettimeofday(&client->stats.start, NULL); 
@@ -80,7 +86,7 @@ int configure_poll(client_t * client)
    client->agent_packet_queue_count =  malloc(sizeof(int)*client->num_parallel_connections); 
 	client->agent_needed_header_size = malloc(sizeof(int)*client->num_parallel_connections); 
   	client->packet =  malloc(sizeof(serialized_data_t) * client->num_parallel_connections);  
-	printf("buf %d queu %d \n", client->transfer_request->buffer_size, client->transfer_request->queue_size);
+//	printf("buf %d queu %d \n", client->transfer_request->buffer_size, client->transfer_request->queue_size);
 	
 	for(i = 0; i < client->num_parallel_connections; i++) { 
 
@@ -418,6 +424,7 @@ client_t * handle_host_side_connect(agent_t *agent)
 	{
 		accept_host_side(agent, new_client); 
 
+		
 		if(check_for_transfer_request(agent, new_client, "CLIENT")) 
 		{
 	   	connect_agent_side(agent, new_client); 
@@ -829,6 +836,7 @@ int agent_connected_event(agent_t *agent, event_info_t *event_info)
 	if(!optval)
 	{
   		new_client->num_parallel_connections++; 
+
 		new_client->agent_fd_poll[event_info->fd] = IN;  
       send_uuid(new_client->agent_sock[event_info->fd], new_client->uuid); 
 	}
@@ -1144,7 +1152,7 @@ int get_free_packet_index(agent_t * agent, event_info_t * event)
 #ifdef DEBUG
          printf("index=%d agent=%d\n", i, event->agent_id); 
 #endif
-         return i; 
+			return i; 
       }
    } 
    return -1; 
@@ -1271,6 +1279,15 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
       } 
 
 		/* UPDATE STATS */ 
+
+		event->client->agent_packet_queue_count[event->agent_id]++;  
+		
+		event->client->stats.average_queue_length[event->agent_id] 
+				+= event->client->agent_packet_queue_count[event->agent_id];
+
+
+
+
 		event->client->stats.recv_packets[event->agent_id]++; 
 		event->client->stats.recv_bytes[event->agent_id] +=  sizeof(uint32_t) + packet_size;  
       event->client->buffered_packet[event->agent_id][packet_index].size = packet_size; 
@@ -1335,7 +1352,6 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
       }
 	 	else if(size_count == packet_size)
 		{
-         event->client->agent_packet_queue_count[event->agent_id]++;  
          event->client->agent_packet_index_in[event->agent_id] = EMPTY; 
       //   event->client->buffered_packet[event->agent_id][packet_index].size = 0; 
 			break;
@@ -1682,11 +1698,11 @@ void getinfo(client_t *client) {
 	printf("recv %lf bytes/sec\n", client->stats.total_recv_bytes/elapsed);
 
 
-
-	printf(" i, sent_bytes, recv_bytes, sent_packets, recv_packets\n"); 
+	printf(" i, sent_bytes, recv_bytes, sent_packets, recv_packets, average_length\n"); 
 	for(i = 0; i < client->num_parallel_connections; i++) { 
-		printf("%d %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "\n", i, client->stats.sent_bytes[i], client->stats.recv_bytes[i], 
-				client->stats.sent_packets[i], client->stats.recv_packets[i]); 
+		printf("%d %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %lf\n", i, client->stats.sent_bytes[i], client->stats.recv_bytes[i], 
+				client->stats.sent_packets[i], client->stats.recv_packets[i], 
+				(double)client->stats.average_queue_length[i]/client->stats.recv_packets[i]); 
 	}
 
 

@@ -396,7 +396,6 @@ int poll_data_transfer(agent_t *agent, client_t * client)
 	int i,j ; 
 	int all_closed = 0; 
 
-	printf("IN main poll loop\n"); 
 		
 
 	while(1) 

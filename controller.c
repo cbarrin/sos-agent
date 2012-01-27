@@ -142,7 +142,7 @@ int get_controller_message(controller_t *controller)
    }
    
 
-	printf("[%d]\n", transfer->allowed_connections); 
+//	printf("[%d]\n", transfer->allowed_connections); 
 
    HASH_ADD_INT(controller->requests, id, transfer); 
    

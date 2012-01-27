@@ -142,6 +142,7 @@ typedef struct stats_struct{
 	uint64_t *recv_bytes; 
 	uint64_t *sent_packets;
 	uint64_t *recv_packets; 
+	unsigned int *average_queue_length; 
 }stats_t; 
 
 typedef struct client_struct 
