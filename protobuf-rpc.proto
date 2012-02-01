@@ -1,5 +1,0 @@
-message connect_info_t 
-{
-   required string connectIP = 1; 
-   required int32 port = 2; 
-}

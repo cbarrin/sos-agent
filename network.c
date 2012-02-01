@@ -21,7 +21,6 @@
 
 
 #include "uthash.h"
-#include "packet.pb-c.h"
 #include "common.h"
 #include "datatypes.h"
 #include "arguments.h"
@@ -919,17 +918,6 @@ client_t * init_new_client(agent_t *agent, uuid_t * uuid)
 }
 
 
-int serialize_packet(Packet *packet, event_info_t *event, uint8_t *payload, size_t  size, uint8_t *serialized_data) { 
-	packet->seq_num = event->client->send_seq; 
-	packet->payload.data = payload; 
-	packet->payload.len = size; 
-	packet__pack(packet, serialized_data); 	
-
-	event->client->send_seq++; 
-
-
-	return EXIT_SUCCESS; 
-}
 
 
 int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t *event_agent)

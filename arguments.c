@@ -25,7 +25,6 @@
 
 
 #include "uthash.h"
-#include "packet.pb-c.h"
 #include "common.h"
 #include "datatypes.h"
 #include "arguments.h"

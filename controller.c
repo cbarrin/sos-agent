@@ -23,7 +23,6 @@
 
 
 #include "common.h"
-#include "packet.pb-c.h"
 #include "uthash.h"
 #include "datatypes.h"
 #include "arguments.h"
@@ -32,7 +31,6 @@
 #include "controller.h"
 
 
-#include "protobuf-rpc.pb-c.h" 
 
 
 int init_controller_listener(controller_t * controller) 
