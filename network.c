@@ -85,7 +85,6 @@ int configure_poll(client_t * client)
    client->agent_packet_queue_count =  malloc(sizeof(int)*client->num_parallel_connections); 
 	client->agent_needed_header_size = malloc(sizeof(int)*client->num_parallel_connections); 
   	client->packet =  malloc(sizeof(serialized_data_t) * client->num_parallel_connections);  
-//	printf("buf %d queu %d \n", client->transfer_request->buffer_size, client->transfer_request->queue_size);
 	
 	for(i = 0; i < client->num_parallel_connections; i++) { 
 
@@ -307,7 +306,7 @@ int create_listen_sockets(agent_t *agent)
 		}
 
 		servaddr.sin_family = AF_INET; 
-		/* FIXME make option to specify bind ip address */ 
+
 		if(( agent->listen_fds.host_listen_sock = 
 			socket(AF_INET, SOCK_STREAM, 0)) == -1) 
 		{
@@ -412,12 +411,6 @@ client_t * handle_host_side_connect(agent_t *agent)
 {
 
  	client_t *new_client = init_new_client(agent, NULL); 
-//	if(!agent->options.nonOF && new_client != NULL)
-//	{
-			
-		//get_controller_message(&agent->controller); 
-//	}
-
 	
 	if(new_client != NULL) 
 	{
@@ -439,7 +432,6 @@ client_t * handle_host_side_connect(agent_t *agent)
 int accept_host_side(agent_t *agent, client_t *new_client) 
 {
 	socklen_t sin_size; 
-	//struct sockaddr_storage their_addr; 
 	struct sockaddr_in their_addr; 
 	struct epoll_event event; 
 
@@ -556,7 +548,6 @@ int handle_host_connected(agent_t *agent, client_t * client)
 	   		exit(1); 
    	}
 		/* all sockets have been connected go go go!!! */
-		//if(client->num_parallel_connections == agent->options.num_parallel_connections
    
 		if(client->allowed_connections && client->num_parallel_connections == client->allowed_connections
 				&& client->host_fd_poll == IN)
@@ -595,10 +586,6 @@ int connect_host_side(agent_t *agent, client_t *new_client)
    struct sockaddr_in servaddr; 
 	struct epoll_event event; 
 
-	if(!agent->options.nonOF && new_client != NULL)
-	{
-//		get_controller_message(&agent->controller); 
-	}
 
    if(( new_client->host_sock =  socket(AF_INET, SOCK_STREAM, 0)) == -1)
    {
@@ -754,12 +741,6 @@ int get_uuid(int fd, uuid_t * uuid)
       }
    }
 
-#ifdef DEBUG
-   char buf[100]; 
-   uuid_unparse(*uuid, buf); 
-   printf("%s\n", buf); 
-#endif 
-
    return EXIT_SUCCESS;   
 }
 
@@ -799,7 +780,6 @@ int get_uuid_and_confirm_client(agent_t *agent, int fd)
       client_hash->client->agent_fd_poll[client_hash->client->num_parallel_connections] = IN; 
       client_hash->client->num_parallel_connections++; 
   
-//     if(client_hash->client->num_parallel_connections == agent->options.num_parallel_connections 
      if(client_hash->client->allowed_connections && client_hash->client->num_parallel_connections == client_hash->client->allowed_connections 
          && client_hash->client->host_fd_poll == IN)
      {
@@ -843,9 +823,7 @@ int agent_connected_event(agent_t *agent, event_info_t *event_info)
 	{
       printf("%d\n", errno); 
 		perror(""); 
-	//	printf("failed %d\n", event_info->fd); 
 	   printf("%s %d\n", __FILE__, __LINE__); 
-      //exit(1); 
 	}
 	if(epoll_ctl(agent->event_pool, EPOLL_CTL_DEL, 
 		new_client->agent_sock[event_info->fd], NULL))
@@ -854,7 +832,6 @@ int agent_connected_event(agent_t *agent, event_info_t *event_info)
 		printf("%s %d\n", __FILE__, __LINE__); 
 		exit(1); 
 	}	
-//   if(new_client->num_parallel_connections == agent->options.num_parallel_connections
    if(new_client->allowed_connections && new_client->num_parallel_connections == new_client->allowed_connections 
       && new_client->host_fd_poll == IN)
    { 
@@ -882,7 +859,6 @@ int clean_up_unconnected_parallel_sockets(agent_t *agent, client_t *client)
 
 client_t * init_new_client(agent_t *agent, uuid_t * uuid) 
 {
-//   int i,j; 
 	client_t *new_client; 	
 	new_client = calloc(sizeof(client_t),1); 
    if(new_client == NULL) 
@@ -975,22 +951,16 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 	   }
 		/*STATS UPDATE */ 
 
-
-
 		event_host->client->stats.total_recv_bytes +=size; 
 	   /* send size of data and then serialized data */
       n_size = htonl(size + sizeof(int));  
       memcpy(event_host->client->packet[event_agent->agent_id].serialized_data, &n_size, sizeof(size)); 
       memcpy(event_host->client->packet[event_agent->agent_id].serialized_data + sizeof(int), &event_host->client->send_seq, sizeof(int)); 
-//      printf("%d %d\n", (int)*(event_host->client->packet[event_agent->agent_id].serialized_data +sizeof(int)), event_host->client->send_seq); 
 		event_host->client->send_seq++; 
-//      printf("test === %d %d\n",(int) event_host->client->packet[event_agent->agent_id].serialized_data, size) ; 
-      //size +=sizeof(size);  
 		size += sizeof(int) *2; 
       event_host->client->packet[event_agent->agent_id].host_packet_size =  size; 
       size_count = 0; 
 
-//		event_host->client->stats.total_recv_bytes +=size -sizeof(int)*2; 
 		event_host->client->stats.sent_bytes[event_agent->agent_id] +=  size; 
 		event_host->client->stats.sent_packets[event_agent->agent_id]++; 
 
@@ -1030,7 +1000,7 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
       }
       else 
       {
-         printf("ERROROROROR111\n"); 
+         printf("Should not have gotten here... %s %d\n",__FILE__, __LINE__); 
          exit(1); 
       } 
 
@@ -1131,7 +1101,6 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 int get_free_packet_index(agent_t * agent, event_info_t * event)
 {
    int i; 
-   //for(i = 0; i < MAX_QUEUE_SIZE; i++) 
    for(i = 0; i < event->client->transfer_request->queue_size; i++) 
    {
       if(event->client->buffered_packet[event->agent_id][i].in_use == 0)  
@@ -1179,10 +1148,12 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
    {
       get_header=1; 
       packet_index = get_free_packet_index(agent, event); 
+
       if(packet_index < 0) { 
          printf("I SHOULDNT HAVE BEEN TRIGGERED!! %d \n", event->agent_id); 
          exit(1); 
       } 
+		
       event->client->agent_packet_index_in[event->agent_id] = packet_index; 
     }
     if(get_header) { 
@@ -1191,7 +1162,6 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 
 	   while(1) { 
 		   if(( size = recv(event->fd, (uint8_t *)&event->client->header_size[event->agent_id] +size_count, 
-		   //if(( size = recv(event->fd, event->client->header_size[event->agent_id] +size_count, 
 				sizeof(uint32_t) - size_count, 0)) == -1)  
 		   { 
             if (errno == ESHUTDOWN || errno == ECONNRESET) 
@@ -1199,12 +1169,11 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
                printf("REST!!\n"); 
                if(epoll_ctl(event->client->client_event_pool, EPOLL_CTL_DEL, 
                 event->fd, NULL)) 
-             {  
-			      perror(""); 
-			      printf("%s %d\n", __FILE__, __LINE__); 
-			      exit(1); 	
-             }
-//               event->client->host_fd_poll = OFF; 
+             	{  
+			      	perror(""); 
+			      	printf("%s %d\n", __FILE__, __LINE__); 
+			      	exit(1); 	
+             	}
             	event->client->agent_fd_poll[event->agent_id] = CLOSED; 
                close(event->fd); 
                return CLOSE; 
@@ -1214,7 +1183,6 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 				   {
 					   printf("Weird false fire %d %d %d\n", event->client->recv_seq, event->agent_id, event->client->host_fd_poll); 	
                   exit(1); 
-					  // return EXIT_SUCCESS; 
 				   }
                else {
 #ifdef DEBUG
@@ -1250,8 +1218,6 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 		      size_count +=size; 
          }
 
-      //printf("%d this is the sizen",  ntohl(event->client->header_size[event->agent_id])); 
-
 		   if(size_count == sizeof(uint32_t))
 		   {
 				event->client->agent_needed_header_size[event->agent_id] = 0;	
@@ -1280,7 +1246,6 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 		event->client->stats.recv_bytes[event->agent_id] +=  sizeof(uint32_t) + packet_size;  
       event->client->buffered_packet[event->agent_id][packet_index].size = packet_size; 
 
-      //if(packet_size > sizeof(event->client->buffered_packet[event->agent_id][packet_index].serialized_data))  /* FIX ME */
       if(packet_size > event->client->transfer_request->buffer_size)  /* FIX ME */
   	   {
          printf(" size: %d count: %d agent %d\n",
@@ -1332,7 +1297,6 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 					printf("%s %d\n", __FILE__, __LINE__); 
            		exit(1); 
             }
-        //    event->client->agent_fd_poll[event->agent_id] = OFF; 
          }
          event->client->agent_fd_poll[event->agent_id] = CLOSED; 
          return CLOSE; 
@@ -1341,25 +1305,12 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 	 	else if(size_count == packet_size)
 		{
          event->client->agent_packet_index_in[event->agent_id] = EMPTY; 
-      //   event->client->buffered_packet[event->agent_id][packet_index].size = 0; 
 			break;
 		}
 	}
 
-//  event->client->buffered_packet[event->agent_id][packet_index].packet = packet__unpack(NULL, 
- //     packet_size, event->client->buffered_packet[event->agent_id][packet_index].serialized_data);   
-
-	
 	memcpy(&event->client->buffered_packet[event->agent_id][packet_index].seq_num, 
       event->client->buffered_packet[event->agent_id][packet_index].serialized_data,  sizeof(int)); 
-
-	/*
-	if(event->client->buffered_packet[event->agent_id][packet_index].packet == NULL)  
-   {
-		printf("protobuf error\n"); 
-      exit(1); 
-	} 
-	*/ 
 
 
    agent_id = event->agent_id; 
@@ -1368,7 +1319,6 @@ int read_agent_send_host(agent_t * agent, event_info_t *event)
 #endif
    
 
-      //if(event->client->agent_packet_queue_count[event->agent_id] == MAX_QUEUE_SIZE)
       if(event->client->agent_packet_queue_count[event->agent_id] == event->client->transfer_request->queue_size)
       { 
 #ifdef DEBUG
@@ -1468,7 +1418,6 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 		while(1) 
 		{
 			size = send(event->client->host_sock,(uint8_t *) 
-            //event->client->buffered_packet[agent_id][packet_index].packet->payload.data + size_count,  
             event->client->buffered_packet[agent_id][packet_index].serialized_data +sizeof(int) + size_count,  
      		event->client->buffered_packet[agent_id][packet_index].size -sizeof(int) - size_count, 0);  
 
@@ -1552,7 +1501,6 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
 			{
 
 				event->client->stats.total_sent_bytes += size_count; 	
-				//packet__free_unpacked(event->client->buffered_packet[agent_id][packet_index].packet, NULL); 
 #ifdef DEBUG
             printf("sent %d packet_index %d agent %d\n", event->client->recv_seq, packet_index, agent_id); 
 #endif 
@@ -1590,7 +1538,6 @@ int send_data_host(agent_t *agent,  event_info_t *event, int remove_fd)
                   } 
                   event->client->agent_fd_poll[agent_id] = IN; 
                }
-               //else { printf("kjkjkj\n"); exit(1); } 
 
 
             }
@@ -1692,6 +1639,4 @@ void getinfo(client_t *client) {
 				client->stats.sent_packets[i], client->stats.recv_packets[i], 
 				(double)client->stats.average_queue_length[i]/client->stats.recv_packets[i]); 
 	}
-
-
 }
