@@ -40,6 +40,7 @@ int configure_stats(client_t * client) {
 	client->stats.sent_packets = malloc(sizeof(uint64_t) *client->num_parallel_connections);
 	client->stats.recv_packets = malloc(sizeof(uint64_t) *client->num_parallel_connections);
 	client->stats.average_queue_length = malloc(sizeof(unsigned int) *client->num_parallel_connections); 
+	client->stats.blocked = malloc(sizeof(unsigned int) *client->num_parallel_connections); 
 
 	if(client->stats.sent_bytes == NULL) { 
 		printf("Malloc failed\n"); 
@@ -61,6 +62,10 @@ int configure_stats(client_t * client) {
 		printf("malloc failed\n"); 
 		exit(1); 
 	}
+	if(client->stats.blocked == NULL) { 
+		printf("malloc failed\n"); 
+		exit(1); 
+	}
 
 
 	for(i = 0; i < client->num_parallel_connections; i++) { 
@@ -69,6 +74,7 @@ int configure_stats(client_t * client) {
 		client->stats.sent_packets[i] = 0 ; 
 		client->stats.recv_packets[i] = 0 ; 
 		client->stats.average_queue_length[i] = 0; 
+		client->stats.blocked[i] = 0; 
 	}
 	
 	gettimeofday(&client->stats.start, NULL); 
@@ -1015,6 +1021,8 @@ int read_host_send_agent(agent_t * agent, event_info_t *event_host, event_info_t
 		   if(errno == EAGAIN)
 			{
 
+
+				event_host->client->stats.blocked[event_agent->agent_id]++;
             event_host->client->packet[event_agent->agent_id].host_sent_size = size_count;               
             event_host->client->packet[event_agent->agent_id].host_packet_size = size;               
             
@@ -1633,10 +1641,10 @@ void getinfo(client_t *client) {
 	printf("recv %lf bytes/sec\n", client->stats.total_recv_bytes/elapsed);
 
 
-	printf(" i, sent_bytes, recv_bytes, sent_packets, recv_packets, average_length\n"); 
+	printf(" i, sent_bytes, recv_bytes, sent_packets, recv_packets, average_length, blocked\n"); 
 	for(i = 0; i < client->num_parallel_connections; i++) { 
-		printf("%d %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %lf\n", i, client->stats.sent_bytes[i], client->stats.recv_bytes[i], 
+		printf("%d %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 " %lf %u\n", i, client->stats.sent_bytes[i], client->stats.recv_bytes[i], 
 				client->stats.sent_packets[i], client->stats.recv_packets[i], 
-				(double)client->stats.average_queue_length[i]/client->stats.recv_packets[i]); 
+				(double)client->stats.average_queue_length[i]/client->stats.recv_packets[i], client->stats.blocked[i]); 
 	}
 }
