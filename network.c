@@ -1626,7 +1626,7 @@ int close_all_data_sockets(agent_t * agent, client_t * client)
 {
 	int i; 
    close(client->host_sock); 
-	for(i = 0; i < agent->options.num_parallel_connections; i++)
+	for(i = 0; i <client->num_parallel_connections; i++)
 	{
 		close(client->agent_sock[i]); 
 	}
