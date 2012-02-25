@@ -1667,6 +1667,7 @@ void getinfo(client_t *client) {
 	uint64_t std_pkts  = 0; 
 	uint64_t std_bytes  = 0; 
 
+
 	for(i = 0; i < client->num_parallel_connections; i++) { 
 		total_sent_bytes += client->stats.sent_bytes[i]; 
 		total_sent_pkts += client->stats.sent_packets[i]; 
@@ -1677,9 +1678,11 @@ void getinfo(client_t *client) {
 	}
 
 
-	printf("Overhead, STD_sentBytes, STD_sentPackets\n");  
-	printf("%lf %lf %lf\n",(double)((total_sent_bytes - client->stats.total_recv_bytes)/(double)(total_sent_bytes)*100), 
-			sqrt(std_bytes/(double)client->num_parallel_connections), sqrt(std_pkts/(double)client->num_parallel_connections)); 	
+	printf("Overhead, AVG_sentBytes, STD_sentBytes, Average_Packets, STD_sentPackets\n");  
+	printf("%lf %lf %lf %lf %lf\n",(double)((total_sent_bytes - client->stats.total_recv_bytes)/(double)(total_sent_bytes)*100),
+			total_sent_bytes/(double)client->num_parallel_connections, 
+			sqrt(std_bytes/(double)client->num_parallel_connections), sqrt(std_pkts/(double)client->num_parallel_connections),
+			total_sent_pkts/(double)client->num_parallel_connections); 	
 	
 
 /*
