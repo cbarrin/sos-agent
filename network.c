@@ -1654,31 +1654,32 @@ void getinfo(client_t *client) {
 	printf("num_connections: %d\n", client->transfer_request->allowed_connections); 
 	printf("buffer_size: %d\n", client->transfer_request->buffer_size); 
 	printf("queue_size: %d\n", client->transfer_request->queue_size); 
-//	printf("total_sent_bytes: %" PRIu64 "\n", client->stats.total_sent_bytes); 
-//	printf("total_recv_bytes: %" PRIu64 "\n", client->stats.total_recv_bytes); 
+
+//printf("total_sent_bytes: %" PRIu64 "\n", client->stats.total_sent_bytes); 
+//printf("total_recv_bytes: %" PRIu64 "\n", client->stats.total_recv_bytes); 
 
 //	printf("elapsed %lf\n", elapsed); 
 //	printf("sent %lf bytes/sec\n", client->stats.total_sent_bytes/elapsed);
-//	printf("recv %lf bytes/sec\n", client->stats.total_recv_bytes/elapsed);
+	//printf("recv %lf bytes/sec\n", client->stats.total_recv_bytes/elapsed);
 
-	double total_sent_bytes  = 0; 
-	double total_sent_pkts  = 0; 
-	double std_pkts  = 0; 
-	double std_bytes  = 0; 
+	uint64_t total_sent_bytes  = 0; 
+	uint64_t total_sent_pkts  = 0; 
+	uint64_t std_pkts  = 0; 
+	uint64_t std_bytes  = 0; 
 
 	for(i = 0; i < client->num_parallel_connections; i++) { 
 		total_sent_bytes += client->stats.sent_bytes[i]; 
 		total_sent_pkts += client->stats.sent_packets[i]; 
 	}
 	for(i = 0; i < client->num_parallel_connections; i++) { 
-		std_pkts += pow((client->stats.sent_packets[i] - total_sent_pkts/client->num_parallel_connections),2);
-		std_bytes += pow((client->stats.sent_bytes[i] - total_sent_bytes/client->num_parallel_connections),2);
+		std_pkts += pow((client->stats.sent_packets[i] - total_sent_pkts/(double)client->num_parallel_connections),2);
+		std_bytes += pow((client->stats.sent_bytes[i] - total_sent_bytes/(double)client->num_parallel_connections),2);
 	}
 
 
 	printf("Overhead, STD_sentBytes, STD_sentPackets\n");  
-	printf("%lf %lf %lf\n", (total_sent_bytes - client->stats.total_sent_bytes)/(total_sent_bytes) * 100, 
-			sqrt(std_bytes/client->num_parallel_connections), sqrt(std_pkts/client->num_parallel_connections)); 	
+	printf("%lf %lf %lf\n",(double)((total_sent_bytes - client->stats.total_recv_bytes)/(double)(total_sent_bytes)*100), 
+			sqrt(std_bytes/(double)client->num_parallel_connections), sqrt(std_pkts/(double)client->num_parallel_connections)); 	
 	
 
 /*
