@@ -1535,33 +1535,37 @@ connection_info_t getinfo(client_t *client) {
     info.avg_chunks = 0;
     info.std_chunks = 0;
 
-    for (i = 0; i < client->num_parallel_connections; i++) {
-        info.total_sent_bytes += client->stats.sent_bytes[i];
-        info.total_sent_chunks += client->stats.sent_packets[i];
-    }
-    for (i = 0; i < client->num_parallel_connections; i++) {
-        info.std_chunks += pow(
-            (client->stats.sent_packets[i] -
-             info.total_sent_chunks / (double)client->num_parallel_connections),
-            2);
-        info.std_sent_bytes += pow(
-            (client->stats.sent_bytes[i] -
-             info.total_sent_bytes / (double)client->num_parallel_connections),
-            2);
-    }
+    if (strcmp(client->transfer_request->type, "AGENT")) {
+        // If the agent is of type "AGENT", then don't try to get info
+        for (i = 0; i < client->num_parallel_connections; i++) {
+            info.total_sent_bytes += client->stats.sent_bytes[i];
+            info.total_sent_chunks += client->stats.sent_packets[i];
+        }
+        for (i = 0; i < client->num_parallel_connections; i++) {
+            info.std_chunks +=
+                pow((client->stats.sent_packets[i] -
+                     info.total_sent_chunks /
+                         (double)client->num_parallel_connections),
+                    2);
+            info.std_sent_bytes +=
+                pow((client->stats.sent_bytes[i] -
+                     info.total_sent_bytes /
+                         (double)client->num_parallel_connections),
+                    2);
+        }
 
-    info.overhead =
-        (double)((info.total_sent_bytes - client->stats.total_recv_bytes) /
-                 (double)(info.total_sent_bytes) * 100);
-    info.avg_sent_bytes =
-        info.total_sent_bytes / (double)client->num_parallel_connections;
-    info.std_sent_bytes =
-        sqrt(info.std_sent_bytes / (double)client->num_parallel_connections);
-    info.avg_chunks =
-        info.total_sent_chunks / (double)client->num_parallel_connections;
-    info.std_chunks =
-        sqrt(info.std_chunks / (double)client->num_parallel_connections);
-
+        info.overhead =
+            (double)((info.total_sent_bytes - client->stats.total_recv_bytes) /
+                     (double)(info.total_sent_bytes) * 100);
+        info.avg_sent_bytes =
+            info.total_sent_bytes / (double)client->num_parallel_connections;
+        info.std_sent_bytes = sqrt(info.std_sent_bytes /
+                                   (double)client->num_parallel_connections);
+        info.avg_chunks =
+            info.total_sent_chunks / (double)client->num_parallel_connections;
+        info.std_chunks =
+            sqrt(info.std_chunks / (double)client->num_parallel_connections);
+    }
     printf(
         "Overhead, AVG_sentBytes, STD_sentBytes, Average_Packets, "
         "STD_sentPackets\n");
