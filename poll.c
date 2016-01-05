@@ -133,6 +133,7 @@ int poll_loop(agent_t *agent) {
         n_events = epoll_wait(agent->event_pool, &events, 1, timeout);
 
         if (n_events < 0) {
+            if (errno = EINTR) continue;
             perror("epoll_wait");
             exit(1);
         } else if (n_events) {
@@ -422,6 +423,7 @@ int poll_data_transfer(agent_t *agent, client_t *client) {
         n_events = epoll_wait(client->client_event_pool, &event, 1, timeout);
 
         if (n_events < 0) {
+            if (errno = EINTR) continue;
             printf("%d %d\n", timeout,
                    ((event_info_t *)event.data.ptr)->agent_id);
             perror("");
@@ -437,6 +439,7 @@ int poll_data_transfer(agent_t *agent, client_t *client) {
                 n_events =
                     epoll_wait(client->event_poll_out_agent, &event, 1, 0);
                 if (n_events < 0) {
+                    if (errno = EINTR) continue;
                     perror("");
                     printf("%s %d\n", __FILE__, __LINE__);
                     exit(1);
