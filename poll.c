@@ -62,6 +62,11 @@ int poll_loop(agent_t *agent) {
     transfer_request_t *transfer_request_hash = NULL;
 
     struct epoll_event events;
+    
+    /*--Send Data Alarm Initialization--*/
+    signal(SIGALRM, send_data_alarm_handler);
+    alarm(1);
+    /*----------------------------------*/
 
     if (pipe(agent->message_fd) != 0) {
         printf("Failed to create pipe\n");
@@ -537,4 +542,10 @@ else if(!n_events)
 */
     }
     return EXIT_SUCCESS;
+}
+
+void send_data_alarm_handler(int signum) {
+    printf("\nSend data alarm!");
+    signal(SIGALRM, send_data_alarm_handler);
+    alarm(1);
 }
