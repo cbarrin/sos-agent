@@ -1537,8 +1537,6 @@ connection_info_t getinfo(client_t *client) {
     info.total_sent_chunks = 0;
     info.avg_chunks = 0;
     info.std_chunks = 0;
-    
-    info.windowed_sent_bytes = 0;
 
     if (strcmp(client->transfer_request->type, "AGENT")) {
         // If the agent is of type "AGENT", then don't try to get info
