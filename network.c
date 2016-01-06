@@ -1577,20 +1577,4 @@ connection_info_t getinfo(client_t *client) {
 
     return info;
 
-    /*
-
-            printf(" i, sent_bytes, recv_bytes, sent_packets, recv_packets,
-       average_length, blocked_sen, blocked_recv\n");
-            for(i = 0; i < client->num_parallel_connections; i++) {
-                    printf("%d %" PRIu64 " %" PRIu64 " %" PRIu64 " %" PRIu64 "
-       %lf %u %" PRIu64 "\n", i, client->stats.sent_bytes[i],
-       client->stats.recv_bytes[i],
-                                    client->stats.sent_packets[i],
-       client->stats.recv_packets[i],
-                                    (double)client->stats.average_queue_length[i]/client->stats.recv_packets[i],
-                                    client->stats.blocked[i],
-       client->stats.blocked_recv[i]);
-
-            }
-    */
 }

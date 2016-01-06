@@ -65,11 +65,6 @@ int poll_loop(agent_t *agent) {
     transfer_request_t *transfer_request_hash = NULL;
 
     struct epoll_event events;
-    
-    /*--Send Statistics Alarm Initialization--*/
-    signal(SIGALRM, send_statistics_alarm_handler);
-    alarm(1);
-    /*----------------------------------*/
 
     if (pipe(agent->message_fd) != 0) {
         printf("Failed to create pipe\n");
@@ -361,6 +356,11 @@ int poll_data_transfer(agent_t *agent, client_t *client) {
     time_t transfer_current_time;
 
     time(&transfer_start_time);
+    
+    /*--Send Statistics Alarm Initialization--*/
+    signal(SIGALRM, send_statistics_alarm_handler);
+    alarm(1);
+    /*----------------------------------*/
     
     while (1) {
         /* we want to go through parallel sockets
