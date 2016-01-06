@@ -1568,6 +1568,8 @@ connection_info_t getinfo(client_t *client) {
             info.total_sent_chunks / (double)client->num_parallel_connections;
         info.std_chunks =
             sqrt(info.std_chunks / (double)client->num_parallel_connections);
+        
+        client->stats.total_sent_bytes = info.total_sent_bytes;
     }
 //    printf(
 //        "Overhead, AVG_sentBytes, STD_sentBytes, Average_Packets, "
