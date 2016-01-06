@@ -63,16 +63,19 @@ int init_statistics(statistics_t *statistics) {
 int send_statistics_message(client_t *client,
                                         statistics_t *statistics, time_t elapsedtime) {
     char uuid_msg[200];
-    char buffer[500];
+    char buffer[500 + 40 * client->num_parallel_connections];
     connection_info_t info = getinfo(client);
     uint64_t throughput = info.total_sent_bytes * 8 / (uint64_t)elapsedtime;
-    uint64_t windowed_throughput = client->stats.windowed_sent_bytes * 8 / (uint64_t)STATISTICS_INTERVAL;
+    uint64_t windowed_throughput = client->stats.windowed_total_recv_bytes * 8 / (uint64_t)STATISTICS_INTERVAL;
     uuid_unparse(client->uuid, uuid_msg);
     
     if (!strcmp(client->transfer_request->type, "CLIENT")) {
         snprintf(buffer, 500,
-                 "{ \"transfer_id\" : \"%s\", \"throughput\" : \"%lu\", \"windowed_throughput\" : \"%lu\" }",
+                 "{ \"transfer_id\" : \"%s\", \"throughput\" : \"%lu\", \"windowed_throughput\" : \"%lu\",",
                  uuid_msg, throughput, windowed_throughput);
+        put_windowed_recv_bytes_in_buffer(client, buffer);
+        sprintf(buffer, " }");
+
         printf("{ \"transfer_id\" : \"%s\", \"throughput\" : \"%lu\", \"windowed_throughput\" : \"%lu\" }\n",
                  uuid_msg, throughput, windowed_throughput);
         if ((sendto(statistics->sock, buffer, strlen(buffer), 0,
@@ -81,4 +84,12 @@ int send_statistics_message(client_t *client,
         }
     }
     return EXIT_SUCCESS;
+}
+
+void put_windowed_recv_bytes_in_buffer(client_t *client, char *buffer) {
+    int i;
+    for (i = 0; i < client->num_parallel_connections - 1; i++) {
+        sprintf(buffer, " \"socket_%d\" : \"%d\",", i, client->stats.recv_bytes[i]);
+    }
+    sprintf(buffer, " \"socket_%d\" : \"%d\"", i, client->stats.recv_bytes[i]);
 }

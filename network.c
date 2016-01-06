@@ -55,10 +55,12 @@ int configure_stats(client_t *client) {
     int i;
     client->stats.total_sent_bytes = 0;
     client->stats.total_recv_bytes = 0;
-    client->stats.windowed_sent_bytes = 0;
+    client->stats.windowed_total_recv_bytes = 0;
     client->stats.sent_bytes =
         malloc(sizeof(uint64_t) * client->num_parallel_connections);
     client->stats.recv_bytes =
+        malloc(sizeof(uint64_t) * client->num_parallel_connections);
+    client->stats.windowed_recv_bytes =
         malloc(sizeof(uint64_t) * client->num_parallel_connections);
     client->stats.sent_packets =
         malloc(sizeof(uint64_t) * client->num_parallel_connections);
@@ -78,6 +80,10 @@ int configure_stats(client_t *client) {
         exit(1);
     }
     if (client->stats.recv_bytes == NULL) {
+        printf("Malloc failed\n");
+        exit(1);
+    }
+    if (client->stats.windowed_recv_bytes == NULL) {
         printf("Malloc failed\n");
         exit(1);
     }
@@ -109,6 +115,7 @@ int configure_stats(client_t *client) {
     for (i = 0; i < client->num_parallel_connections; i++) {
         client->stats.sent_bytes[i] = 0;
         client->stats.recv_bytes[i] = 0;
+        client->stats.windowed_recv_bytes[i] = 0;
         client->stats.sent_packets[i] = 0;
         client->stats.recv_packets[i] = 0;
         client->stats.average_queue_length[i] = 0;

@@ -349,7 +349,7 @@ int poll_data_transfer(agent_t *agent, client_t *client) {
     int timeout = -1;
     struct epoll_event event;
     int host_socket_closed = 0;
-    int i, j;
+    int i, j, k;
     int all_closed = 0;
     
     time_t transfer_start_time;
@@ -555,8 +555,11 @@ else if(!n_events)
         if (ALARM_FLAG) {
             ALARM_FLAG = 0;
             time(&transfer_current_time);
-            client->stats.windowed_sent_bytes = client->stats.total_recv_bytes - client->stats.windowed_sent_bytes;
-            printf("total_recv: %lu, windowed_sent: %lu\n", client->stats.total_recv_bytes, client->stats.windowed_sent_bytes);
+            client->stats.windowed_total_recv_bytes = client->stats.total_recv_bytes - client->stats.windowed_total_recv_bytes;
+            printf("total_recv: %lu, windowed_total_recv: %lu\n", client->stats.total_recv_bytes, client->stats.windowed_total_recv_bytes);
+            for (k = 0; k < client->num_parallel_connections; k++) {
+                client->stats.windowed_recv_bytes[k] = client->stats.recv_bytes[k] - client->stats.windowed_recv_bytes[k];
+            }
             send_statistics_message(client, &agent->statistics, (transfer_current_time - transfer_start_time));
         }
     }
