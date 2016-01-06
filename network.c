@@ -55,7 +55,7 @@ int configure_stats(client_t *client) {
     int i;
     client->stats.total_sent_bytes = 0;
     client->stats.total_recv_bytes = 0;
-    client->stats.windoed_sent_bytes = 0;
+    client->stats.windowed_sent_bytes = 0;
     client->stats.sent_bytes =
         malloc(sizeof(uint64_t) * client->num_parallel_connections);
     client->stats.recv_bytes =

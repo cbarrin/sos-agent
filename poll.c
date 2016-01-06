@@ -555,7 +555,7 @@ else if(!n_events)
         if (ALARM_FLAG) {
             ALARM_FLAG = 0;
             time(&transfer_current_time);
-            client->stats.windowed_sent_bytes = total_sent_bytes - client->stats.windowed_sent_bytes;
+            client->stats.windowed_sent_bytes = client->stats.total_sent_bytes - client->stats.windowed_sent_bytes;
             send_statistics_message(client, &agent->statistics, (transfer_current_time - transfer_start_time));
         }
     }
