@@ -7,7 +7,7 @@ HASHDIR=./uthash
 CFLAGS +=-I$(HASHDIR)
 
 
-CFILES = arguments.c network.c agent.c poll.c controller.c discovery.c 
+CFILES = arguments.c network.c agent.c poll.c controller.c discovery.c controllerMessages.c
 
 all: 
 	$(CC) $(CFLAGS) -o agent  $(CFILES) $(LIBS)
