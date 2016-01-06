@@ -73,7 +73,7 @@ int send_statistics_message(client_t *client,
                  "{ \"transfer_id\" : \"%s\", \"throughput\" : \"%lu\" }",
                  uuid_msg, throughput);
         printf(buffer, 500,
-                 "{ \"transfer_id\" : \"%s\", \"throughput\" : \"%lu\" }",
+                 "{ \"transfer_id\" : \"%s\", \"throughput\" : \"%lu\" }\n",
                  uuid_msg, throughput);
         if ((sendto(statistics->sock, buffer, strlen(buffer), 0,
                     statistics->dest->ai_addr, statistics->dest->ai_addrlen)) < 0) {
