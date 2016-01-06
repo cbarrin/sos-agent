@@ -55,6 +55,7 @@ int configure_stats(client_t *client) {
     int i;
     client->stats.total_sent_bytes = 0;
     client->stats.total_recv_bytes = 0;
+    client->stats.windoed_sent_bytes = 0;
     client->stats.sent_bytes =
         malloc(sizeof(uint64_t) * client->num_parallel_connections);
     client->stats.recv_bytes =
@@ -1536,6 +1537,8 @@ connection_info_t getinfo(client_t *client) {
     info.total_sent_chunks = 0;
     info.avg_chunks = 0;
     info.std_chunks = 0;
+    
+    info.windowed_sent_bytes = 0;
 
     if (strcmp(client->transfer_request->type, "AGENT")) {
         // If the agent is of type "AGENT", then don't try to get info

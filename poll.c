@@ -359,7 +359,7 @@ int poll_data_transfer(agent_t *agent, client_t *client) {
     
     /*--Send Statistics Alarm Initialization--*/
     signal(SIGALRM, send_statistics_alarm_handler);
-    alarm(1);
+    alarm(STATISTICS_INTERVAL);
     /*----------------------------------*/
     
     while (1) {
@@ -555,6 +555,7 @@ else if(!n_events)
         if (ALARM_FLAG) {
             ALARM_FLAG = 0;
             time(&transfer_current_time);
+            client->stats.windowed_sent_bytes = total_sent_bytes - client->stats.windowed_sent_bytes;
             send_statistics_message(client, &agent->statistics, (transfer_current_time - transfer_start_time));
         }
     }
@@ -565,5 +566,5 @@ void send_statistics_alarm_handler(int signum) {
     //printf("\nSend data alarm!");
     ALARM_FLAG = 1;
     signal(SIGALRM, send_statistics_alarm_handler);
-    alarm(1);
+    alarm(STATISTICS_INTERVAL);
 }

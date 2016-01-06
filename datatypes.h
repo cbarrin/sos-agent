@@ -142,6 +142,7 @@ typedef struct stats_struct {
     struct timeval start, end;
     uint64_t total_sent_bytes;
     uint64_t total_recv_bytes;
+    uint64_t windowed_sent_bytes //Updated within poll loop every alarm
     uint64_t *sent_bytes;
     uint64_t *recv_bytes;
     uint64_t *sent_packets;
