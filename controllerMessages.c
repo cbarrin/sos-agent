@@ -64,7 +64,7 @@ int send_statistics_message(client_t *client,
                                         statistics_t *statistics, time_t elapsedtime) {
     char uuid_msg[200];
     char buffer[500];
-    connection_info_t info = getinfo(&client);
+    connection_info_t info = getinfo(client);
     uint64_t throughput = info.total_sent_bytes * 8 / (uint64_t)elapsedtime;
     uint64_t windowed_throughput = client->stats.windowed_sent_bytes * 8 / (uint64_t)STATISTICS_INTERVAL;
     uuid_unparse(client->uuid, uuid_msg);

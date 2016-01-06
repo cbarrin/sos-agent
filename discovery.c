@@ -95,7 +95,7 @@ int send_controller_termination_message(client_t *client,
                                         discovery_t *discovery) {
     char uuid_msg[200];
     char buffer[500];
-    connection_info_t info = getinfo(&client);
+    connection_info_t info = getinfo(client);
     uuid_unparse(client->uuid, uuid_msg);
     snprintf(buffer, 500,
              "{ \"type\" : \"%s\", \"transfer_id\" : \"%s\", \"overhead\" : "
