@@ -555,8 +555,8 @@ else if(!n_events)
         if (ALARM_FLAG) {
             ALARM_FLAG = 0;
             time(&transfer_current_time);
-            client->stats.windowed_sent_bytes = client->stats.total_sent_bytes - client->stats.windowed_sent_bytes;
-            printf("total_sent: %lu, windowed_sent: %lu\n", client->stats.total_sent_bytes, client->stats.windowed_sent_bytes);
+            client->stats.windowed_sent_bytes = client->stats.total_recv_bytes - client->stats.windowed_sent_bytes;
+            printf("total_recv: %lu, windowed_sent: %lu\n", client->stats.total_recv_bytes, client->stats.windowed_sent_bytes);
             send_statistics_message(client, &agent->statistics, (transfer_current_time - transfer_start_time));
         }
     }
