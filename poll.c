@@ -558,7 +558,8 @@ else if(!n_events)
             client->stats.windowed_total_recv_bytes = client->stats.total_recv_bytes - client->stats.windowed_total_recv_bytes;
             printf("total_recv: %lu, windowed_total_recv: %lu\n", client->stats.total_recv_bytes, client->stats.windowed_total_recv_bytes);
             for (k = 0; k < client->num_parallel_connections; k++) {
-                client->stats.windowed_recv_bytes[k] = client->stats.recv_bytes[k] - client->stats.windowed_recv_bytes[k];
+                /* THIS NEEDS TO BE BETTER UNDERSTOOD */
+                client->stats.windowed_recv_bytes[k] = client->stats.sent_bytes[k] - client->stats.windowed_recv_bytes[k];
             }
             send_statistics_message(client, &agent->statistics, (transfer_current_time - transfer_start_time));
         }
