@@ -62,19 +62,19 @@ int init_statistics(statistics_t *statistics) {
 
 int send_statistics_message(client_t *client,
                                         statistics_t *statistics, time_t elapsedtime) {
-    //char uuid_msg[200];
+    char uuid_msg[200];
     char buffer[500];
     connection_info_t info = getinfo(client);
     uint64_t throughput = info.total_sent_bytes / (uint64_t)elapsedtime;
-    //uuid_unparse(client->uuid, uuid_msg);
+    uuid_unparse(client->uuid, uuid_msg);
     
-    if (client->transfer_request->type == "CLIENT") {
+    if (!strcmp(client->transfer_request->type, "CLIENT")) {
         snprintf(buffer, 500,
-                 "{ \"throughput\" : \"%lu\" }",
-                 throughput);
+                 "{ \"transfer_id\" : \"%s\", \"throughput\" : \"%lu\" }",
+                 uuid_msg, throughput);
         printf(buffer, 500,
-                 "{ \"throughput\" : \"%lu\" }",
-                 throughput);
+                 "{ \"transfer_id\" : \"%s\", \"throughput\" : \"%lu\" }",
+                 uuid_msg, throughput);
         if ((sendto(statistics->sock, buffer, strlen(buffer), 0,
                     statistics->dest->ai_addr, statistics->dest->ai_addrlen)) < 0) {
             perror("Send statistics message\n");
