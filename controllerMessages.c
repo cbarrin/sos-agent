@@ -24,6 +24,7 @@
 #include "datatypes.h"
 #include "arguments.h"
 #include "network.h"
+#include "controllerMessages.h"
 
 int init_statistics(statistics_t *statistics) {
     struct addrinfo hints, *servinfo;
@@ -89,7 +90,7 @@ int send_statistics_message(client_t *client,
 void put_windowed_recv_bytes_in_buffer(client_t *client, char *buffer) {
     int i;
     for (i = 0; i < client->num_parallel_connections - 1; i++) {
-        sprintf(buffer, " \"socket_%d\" : \"%d\",", i, client->stats.recv_bytes[i]);
+        sprintf(buffer, " \"socket_%d\" : \"%lu\",", i, client->stats.recv_bytes[i]);
     }
-    sprintf(buffer, " \"socket_%d\" : \"%d\"", i, client->stats.recv_bytes[i]);
+    sprintf(buffer, " \"socket_%d\" : \"%lu\"", i, client->stats.recv_bytes[i]);
 }
