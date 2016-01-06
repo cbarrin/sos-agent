@@ -1516,10 +1516,10 @@ connection_info_t getinfo(client_t *client) {
     elapsed =
         (client->stats.end.tv_sec + client->stats.end.tv_usec / 1000000.0) -
         (client->stats.start.tv_sec + client->stats.start.tv_usec / 1000000.0);
-    printf("num_connections: %d\n",
-           client->transfer_request->allowed_connections);
-    printf("buffer_size: %d\n", client->transfer_request->buffer_size);
-    printf("queue_size: %d\n", client->transfer_request->queue_size);
+    //printf("num_connections: %d\n",
+    //       client->transfer_request->allowed_connections);
+    //printf("buffer_size: %d\n", client->transfer_request->buffer_size);
+    //printf("queue_size: %d\n", client->transfer_request->queue_size);
 
     // printf("total_sent_bytes: %" PRIu64 "\n",
     // client->stats.total_sent_bytes);
@@ -1568,12 +1568,12 @@ connection_info_t getinfo(client_t *client) {
         info.std_chunks =
             sqrt(info.std_chunks / (double)client->num_parallel_connections);
     }
-    printf(
-        "Overhead, AVG_sentBytes, STD_sentBytes, Average_Packets, "
-        "STD_sentPackets\n");
-    printf("%lf %lf %lf %lf %lf\n", (double)info.overhead,
-           (double)info.avg_sent_bytes, (double)info.std_sent_bytes,
-           (double)info.avg_chunks, (double)info.std_chunks);
+//    printf(
+//        "Overhead, AVG_sentBytes, STD_sentBytes, Average_Packets, "
+//        "STD_sentPackets\n");
+//    printf("%lf %lf %lf %lf %lf\n", (double)info.overhead,
+//           (double)info.avg_sent_bytes, (double)info.std_sent_bytes,
+//           (double)info.avg_chunks, (double)info.std_chunks);
 
     return info;
 
