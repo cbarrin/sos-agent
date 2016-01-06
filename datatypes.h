@@ -195,10 +195,10 @@ typedef struct discovery_struct {
     struct addrinfo *dest;
 } discovery_t;
 
-typedef struct data_info_struct {
+typedef struct statistics_struct {
     int sock;
     struct addrinfo *dest;
-} data_info_t;
+} statistics_t;
 
 typedef struct agent_struct {
     int event_pool;
@@ -206,7 +206,7 @@ typedef struct agent_struct {
     struct options_struct options;
     struct listen_fds_struct listen_fds;
     struct controller_struct controller;
-    struct data_info_struct datainfo;
+    struct statistics_struct statistics;
     struct discovery_struct discovery;
     int message_fd[2];
     int agent_fd_pool[MAX_AGENT_CONNECTIONS];

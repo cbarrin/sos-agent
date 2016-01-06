@@ -250,7 +250,7 @@ int init_agent(agent_t *agent) {
     }
 
     init_discovery(&agent->discovery);
-    init_data_info(&agent->datainfo);
+    init_statistics(&agent->statistics);
 
     return EXIT_SUCCESS;
 }

@@ -66,8 +66,8 @@ int poll_loop(agent_t *agent) {
 
     struct epoll_event events;
     
-    /*--Send Data Alarm Initialization--*/
-    signal(SIGALRM, send_data_alarm_handler);
+    /*--Send Statistics Alarm Initialization--*/
+    signal(SIGALRM, send_statistics_alarm_handler);
     alarm(1);
     /*----------------------------------*/
 
@@ -555,15 +555,15 @@ else if(!n_events)
         if (ALARM_FLAG) {
             ALARM_FLAG = 0;
             time(&transfer_current_time);
-            send_data_info_message(client, &agent->datainfo, (transfer_current_time - transfer_start_time));
+            send_statistics_message(client, &agent->statistics, (transfer_current_time - transfer_start_time));
         }
     }
     return EXIT_SUCCESS;
 }
 
-void send_data_alarm_handler(int signum) {
+void send_statistics_alarm_handler(int signum) {
     //printf("\nSend data alarm!");
     ALARM_FLAG = 1;
-    signal(SIGALRM, send_data_alarm_handler);
+    signal(SIGALRM, send_statistics_alarm_handler);
     alarm(1);
 }
