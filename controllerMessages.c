@@ -61,7 +61,7 @@ int init_statistics(statistics_t *statistics) {
 }
 
 int send_statistics_message(client_t *client,
-                                        statistics_t *statistics, time_t *elapsedtime) {
+                                        statistics_t *statistics, time_t elapsedtime) {
     //char uuid_msg[200];
     char buffer[500];
     connection_info_t info = getinfo(client);

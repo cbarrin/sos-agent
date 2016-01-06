@@ -51,7 +51,7 @@
 #include "controller.h"
 #include "controllerMessages.h"
 
-volatile int ALARM_FLAG
+volatile int ALARM_FLAG = 0;
 
 //#define DEBUG
 int poll_loop(agent_t *agent) {

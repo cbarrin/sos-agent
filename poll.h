@@ -23,4 +23,4 @@
 int poll_loop(agent_t *agent);
 int poll_data_transfer(agent_t *agent, client_t *client);
 
-void send_data_alarm_handler(int signum);
+void send_statistics_alarm_handler(int signum);
