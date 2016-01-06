@@ -49,6 +49,7 @@
 #include "network.h"
 #include "controller.h"
 #include "discovery.h"
+#include "controllerMessages.h"
 
 int configure_stats(client_t *client) {
     int i;
@@ -249,6 +250,7 @@ int init_agent(agent_t *agent) {
     }
 
     init_discovery(&agent->discovery);
+    init_data_info(&agent->datainfo);
 
     return EXIT_SUCCESS;
 }

@@ -49,6 +49,9 @@
 #include "poll.h"
 #include "discovery.h"
 #include "controller.h"
+#include "controllerMessages.h"
+
+volatile int ALARM_FLAG
 
 //#define DEBUG
 int poll_loop(agent_t *agent) {
@@ -353,7 +356,12 @@ int poll_data_transfer(agent_t *agent, client_t *client) {
     int host_socket_closed = 0;
     int i, j;
     int all_closed = 0;
+    
+    time_t transfer_start_time;
+    time_t transfer_current_time;
 
+    time(&transfer_start_time);
+    
     while (1) {
         /* we want to go through parallel sockets
          * and check if they have data. If not close them
@@ -543,12 +551,19 @@ else if(!n_events)
  exit(1);
 }
 */
+        
+        if (ALARM_FLAG) {
+            ALARM_FLAG = 0;
+            time(&transfer_current_time);
+            send_data_info_message(client, &agent->datainfo, (transfer_current_time - transfer_start_time));
+        }
     }
     return EXIT_SUCCESS;
 }
 
 void send_data_alarm_handler(int signum) {
-    printf("\nSend data alarm!");
+    //printf("\nSend data alarm!");
+    ALARM_FLAG = 1;
     signal(SIGALRM, send_data_alarm_handler);
     alarm(1);
 }
