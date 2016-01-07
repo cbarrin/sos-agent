@@ -59,7 +59,7 @@ int init_statistics(statistics_t *statistics) {
         exit(1);
     }
     
-    printf("Statistics port has been opened!\n");
+    printf("Statistics port %d has been opened!\n", statistics->sock);
     return EXIT_SUCCESS;
 }
 
