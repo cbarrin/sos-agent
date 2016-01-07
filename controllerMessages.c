@@ -58,6 +58,8 @@ int init_statistics(statistics_t *statistics) {
         fprintf(stderr, "statistics failed to bind\n");
         exit(1);
     }
+    
+    printf("Statistics port has been opened!\n");
     return EXIT_SUCCESS;
 }
 
@@ -85,6 +87,7 @@ int send_statistics_message(client_t *client,
         perror("Send statistics message\n");
     }
     
+    printf("Statistics message has been sent!\n");
     printf("\n%s\n", buffer);
     return EXIT_SUCCESS;
 }
