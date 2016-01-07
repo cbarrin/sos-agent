@@ -74,7 +74,7 @@ int send_statistics_message(client_t *client,
     
     sprintf(buffer, "{ ");
     sprintf(buffer + strlen(buffer), "\"transfer_id\" : \"%s\", ", uuid_msg);
-    sprintf(buffer + strlen(buffer), "\"type\" : \"%s\", ", client->transfer_request->type);
+    sprintf(buffer + strlen(buffer), "\"agent_type\" : \"%s\", ", client->transfer_request->type);
     sprintf(buffer + strlen(buffer), "\"cumulative_throughput\" : \"%lu\", ", throughput);
     sprintf(buffer + strlen(buffer), "\"rolling_throughput\" : \"%lu\", ", windowed_throughput);
     
