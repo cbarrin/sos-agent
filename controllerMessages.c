@@ -71,14 +71,14 @@ int send_statistics_message(client_t *client,
     uuid_unparse(client->uuid, uuid_msg);
     
     sprintf(buffer, "{ ");
-    sprintf(buffer, "\"transfer_id\" : \"%s\", ", uuid_msg);
-    sprintf(buffer, "\"type\" : \"%s\", ", client->transfer_request->type);
-    sprintf(buffer, "\"cumulative_throughput\" : \"%lu\", ", throughput);
-    sprintf(buffer, "\"rolling_throughput\" : \"%lu\", ", windowed_throughput);
+    sprintf(buffer + strlen(buffer), "\"transfer_id\" : \"%s\", ", uuid_msg);
+    sprintf(buffer + strlen(buffer), "\"type\" : \"%s\", ", client->transfer_request->type);
+    sprintf(buffer + strlen(buffer), "\"cumulative_throughput\" : \"%lu\", ", throughput);
+    sprintf(buffer + strlen(buffer), "\"rolling_throughput\" : \"%lu\", ", windowed_throughput);
     
     put_recv_bytes_in_buffer(client, buffer);
     
-    sprintf(buffer, " }");
+    sprintf(buffer + strlen(buffer), " }");
     
     if ((sendto(statistics->sock, buffer, strlen(buffer), 0,
                 statistics->dest->ai_addr, statistics->dest->ai_addrlen)) < 0) {
@@ -92,16 +92,16 @@ int send_statistics_message(client_t *client,
 void put_recv_bytes_in_buffer(client_t *client, char *buffer) {
     int i;
     
-    sprintf(buffer, " \"per_socket_throughput\" : [");
+    sprintf(buffer + strlen(buffer), " \"per_socket_throughput\" : [");
     
     for (i = 0; i < client->num_parallel_connections - 1; i++) {
-        sprintf(buffer, " { \"socket_id\" : \"%d\",", i);
-        sprintf(buffer, " \"cumulative_throughput\" : \"%lu\",", client->stats.recv_bytes[i]);
-        sprintf(buffer, " \"rolling_throughput\" : \"%lu\" },", client->stats.windowed_recv_bytes[i]);
+        sprintf(buffer + strlen(buffer), " { \"socket_id\" : \"%d\",", i);
+        sprintf(buffer + strlen(buffer), " \"cumulative_throughput\" : \"%lu\",", client->stats.recv_bytes[i]);
+        sprintf(buffer + strlen(buffer), " \"rolling_throughput\" : \"%lu\" },", client->stats.windowed_recv_bytes[i]);
     }
-    sprintf(buffer, " { \"socket_id\" : \"%d\",", i);
-    sprintf(buffer, " \"cumulative_throughput\" : \"%lu\",", client->stats.recv_bytes[i]);
-    sprintf(buffer, " \"rolling_throughput\" : \"%lu\" }", client->stats.windowed_recv_bytes[i]);
-    sprintf(buffer, " ] ");
+    sprintf(buffer + strlen(buffer), " { \"socket_id\" : \"%d\",", i);
+    sprintf(buffer + strlen(buffer), " \"cumulative_throughput\" : \"%lu\",", client->stats.recv_bytes[i]);
+    sprintf(buffer + strlen(buffer), " \"rolling_throughput\" : \"%lu\" }", client->stats.windowed_recv_bytes[i]);
+    sprintf(buffer + strlen(buffer), " ] ");
 }
 
