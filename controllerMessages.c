@@ -96,12 +96,12 @@ void put_recv_bytes_in_buffer(client_t *client, char *buffer) {
     
     for (i = 0; i < client->num_parallel_connections - 1; i++) {
         sprintf(buffer, " { \"socket_id\" : \"%d\",", i);
-        sprintf(buffer, " \"cumulative_throughput\" : \"%lu\",", i, client->stats.recv_bytes[i]);
-        sprintf(buffer, " \"rolling_throughput\" : \"%lu\" },", i, client->stats.windowed_recv_bytes[i]);
+        sprintf(buffer, " \"cumulative_throughput\" : \"%lu\",", client->stats.recv_bytes[i]);
+        sprintf(buffer, " \"rolling_throughput\" : \"%lu\" },", client->stats.windowed_recv_bytes[i]);
     }
     sprintf(buffer, " { \"socket_id\" : \"%d\",", i);
-    sprintf(buffer, " \"cumulative_throughput\" : \"%lu\",", i, client->stats.recv_bytes[i]);
-    sprintf(buffer, " \"rolling_throughput\" : \"%lu\" }", i, client->stats.windowed_recv_bytes[i]);
+    sprintf(buffer, " \"cumulative_throughput\" : \"%lu\",", client->stats.recv_bytes[i]);
+    sprintf(buffer, " \"rolling_throughput\" : \"%lu\" }", client->stats.windowed_recv_bytes[i]);
     sprintf(buffer, " ] ");
 }
 
