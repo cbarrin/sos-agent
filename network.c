@@ -886,7 +886,7 @@ int read_host_send_agent(agent_t *agent, event_info_t *event_host,
         }
         /*STATS UPDATE */
 
-        event_host->client->stats.total_recv_bytes += size;
+        event_host->client->stats.total_sent_bytes += size;
         /* send size of data and then serialized data */
         n_size = htonl(size + sizeof(int));
         memcpy(
@@ -1162,6 +1162,8 @@ int read_agent_send_host(agent_t *agent, event_info_t *event) {
         }
 
         /* UPDATE STATS */
+        
+        event->client->stats.total_recv_bytes += sizeof(uint32_t) + packet_size;
 
         event->client->agent_packet_queue_count[event->agent_id]++;
 
@@ -1545,10 +1547,10 @@ connection_info_t getinfo(client_t *client) {
     info.avg_chunks = 0;
     info.std_chunks = 0;
 
-    if (strcmp(client->transfer_request->type, "AGENT")) {
+    if (!strcmp(client->transfer_request->type, "CLIENT")) {
         // If the agent is of type "AGENT", then don't try to get info
+        info.total_sent_bytes = client->stats.total_sent_bytes;
         for (i = 0; i < client->num_parallel_connections; i++) {
-            info.total_sent_bytes += client->stats.sent_bytes[i];
             info.total_sent_chunks += client->stats.sent_packets[i];
         }
         for (i = 0; i < client->num_parallel_connections; i++) {
