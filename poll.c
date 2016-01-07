@@ -555,12 +555,16 @@ else if(!n_events)
         if (ALARM_FLAG) {
             ALARM_FLAG = 0;
             time(&transfer_current_time);
-            client->stats.windowed_total_recv_bytes = client->stats.total_recv_bytes - client->stats.windowed_total_recv_bytes;
+            
+            send_statistics_message(client, &agent->statistics, (transfer_current_time - transfer_start_time));
+            
+            client->stats.windowed_total_recv_bytes = client->stats.total_recv_bytes - client->stats.prev_total_recv_bytes;
+            client->stats.prev_total_recv_bytes = client->stats.total_recv_bytes;
             //printf("total_recv: %lu, windowed_total_recv: %lu\n", client->stats.total_recv_bytes, client->stats.windowed_total_recv_bytes);
             for (k = 0; k < client->num_parallel_connections; k++) {
-                client->stats.windowed_recv_bytes[k] = client->stats.recv_bytes[k] - client->stats.windowed_recv_bytes[k];
+                client->stats.windowed_recv_bytes[k] = client->stats.recv_bytes[k] - client->stats.prev_recv_bytes[k];
+                client->stats.prev_recv_bytes[k] = client->stats.recv_bytes[k];
             }
-            send_statistics_message(client, &agent->statistics, (transfer_current_time - transfer_start_time));
         }
     }
     return EXIT_SUCCESS;

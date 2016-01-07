@@ -59,7 +59,7 @@ int init_statistics(statistics_t *statistics) {
         exit(1);
     }
     
-    printf("Statistics port %d has been opened!\n", statistics->sock);
+    //printf("Statistics port %d has been opened!\n", statistics->sock);
     return EXIT_SUCCESS;
 }
 
@@ -87,8 +87,8 @@ int send_statistics_message(client_t *client,
         perror("Send statistics message\n");
     }
     
-    printf("Statistics message has been sent!\n");
-    printf("\n%s\n", buffer);
+    //printf("Statistics message has been sent!\n");
+    //printf("\n%s\n", buffer);
     return EXIT_SUCCESS;
 }
 
