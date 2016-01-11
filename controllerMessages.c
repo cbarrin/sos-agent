@@ -78,7 +78,7 @@ int send_statistics_message(client_t *client,
     sprintf(buffer + strlen(buffer), "\"cumulative_throughput\" : \"%lu\", ", throughput);
     sprintf(buffer + strlen(buffer), "\"rolling_throughput\" : \"%lu\", ", windowed_throughput);
     
-    put_recv_bytes_in_buffer(client, buffer);
+    put_recv_bytes_in_buffer(client, buffer, elapsedtime);
     
     sprintf(buffer + strlen(buffer), " }");
     
@@ -92,19 +92,19 @@ int send_statistics_message(client_t *client,
     return EXIT_SUCCESS;
 }
 
-void put_recv_bytes_in_buffer(client_t *client, char *buffer) {
+void put_recv_bytes_in_buffer(client_t *client, char *buffer, time_t elapsedtime) {
     int i;
     
     sprintf(buffer + strlen(buffer), " \"per_socket_throughput\" : [");
     
     for (i = 0; i < client->num_parallel_connections - 1; i++) {
         sprintf(buffer + strlen(buffer), " { \"socket_id\" : \"%d\",", i);
-        sprintf(buffer + strlen(buffer), " \"cumulative_throughput\" : \"%lu\",", client->stats.recv_bytes[i]);
-        sprintf(buffer + strlen(buffer), " \"rolling_throughput\" : \"%lu\" },", client->stats.windowed_recv_bytes[i]);
+        sprintf(buffer + strlen(buffer), " \"cumulative_throughput\" : \"%lu\",", client->stats.recv_bytes[i] * 8 / elapsedtime);
+        sprintf(buffer + strlen(buffer), " \"rolling_throughput\" : \"%lu\" },", client->stats.windowed_recv_bytes[i] * 8 / elapsedtime);
     }
     sprintf(buffer + strlen(buffer), " { \"socket_id\" : \"%d\",", i);
-    sprintf(buffer + strlen(buffer), " \"cumulative_throughput\" : \"%lu\",", client->stats.recv_bytes[i]);
-    sprintf(buffer + strlen(buffer), " \"rolling_throughput\" : \"%lu\" }", client->stats.windowed_recv_bytes[i]);
+    sprintf(buffer + strlen(buffer), " \"cumulative_throughput\" : \"%lu\",", client->stats.recv_bytes[i] * 8 / elapsedtime);
+    sprintf(buffer + strlen(buffer), " \"rolling_throughput\" : \"%lu\" }", client->stats.windowed_recv_bytes[i] * 8 / elapsedtime);
     sprintf(buffer + strlen(buffer), " ] ");
 }
 
