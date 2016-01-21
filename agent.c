@@ -51,6 +51,8 @@
 int main(int argc, char **argv) {
     agent_t agent;
     memset(&agent, 0, sizeof(agent_t));
+    
+    signal(SIGINT, sigint_handler);
 
     get_arguments(&agent.options, argc, argv);
     init_agent(&agent);

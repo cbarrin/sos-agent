@@ -52,6 +52,7 @@
 #include "controllerMessages.h"
 
 volatile int ALARM_FLAG = 0;
+volatile int SIGINT_FLAG = 0;
 
 //#define DEBUG
 int poll_loop(agent_t *agent) {
@@ -566,6 +567,21 @@ else if(!n_events)
                 client->stats.prev_recv_bytes[k] = client->stats.recv_bytes[k];
             }
         }
+        
+        if (SIGINT_FLAG) {
+            send_controller_termination_message(client, &agent->discovery);
+            for (i = 0; i < client->num_parallel_connections; i++) {
+                if (!client->packet[i].host_packet_size) {
+                    close(client->agent_sock[i]);
+                    client->agent_fd_poll[i] = CLOSED;
+                } else if (client->agent_fd_poll[i] != CLOSED) {
+                    all_closed = 0;
+                }
+            }
+            close(client->host_sock);
+            printf("Closed with sig int!");
+            exit(1);
+        }
     }
     return EXIT_SUCCESS;
 }
@@ -575,4 +591,8 @@ void send_statistics_alarm_handler(int signum) {
     ALARM_FLAG = 1;
     signal(SIGALRM, send_statistics_alarm_handler);
     alarm(STATISTICS_INTERVAL);
+}
+
+void sigint_handler(int signum) {
+    SIGINT_FLAG = 1;
 }
