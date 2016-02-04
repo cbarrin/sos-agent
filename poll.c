@@ -41,7 +41,7 @@
 #include <sys/time.h>
 #include <uuid/uuid.h>
 
-#include "uthash.h"
+#include "uthash/uthash.h"
 #include "common.h"
 #include "datatypes.h"
 #include "arguments.h"
@@ -352,6 +352,7 @@ int poll_data_transfer(agent_t *agent, client_t *client) {
     int host_socket_closed = 0;
     int i, j, k;
     int all_closed = 0;
+    int num_open_connections = client->num_parallel_connections;
     
     time_t transfer_start_time;
     time_t transfer_current_time;
@@ -372,8 +373,24 @@ int poll_data_transfer(agent_t *agent, client_t *client) {
             all_closed = 1;
             for (i = 0; i < client->num_parallel_connections; i++) {
                 if (!client->packet[i].host_packet_size) {
+                    if (num_open_connections < 3) {
+                        struct linger linger = { 0 };
+
+                        linger.l_onoff = 1;
+                        linger.l_linger = 30;
+                        int status = setsockopt(client->agent_sock[i],
+                                            SOL_SOCKET, SO_LINGER,
+                                            (const char *) &linger,
+                                            sizeof(linger));
+
+                        if (-1 == status)
+                        {
+                            perror("setsockopt(...,SO_LINGER,...)");
+                        }
+                    }
                     close(client->agent_sock[i]);
                     client->agent_fd_poll[i] = CLOSED;
+                    num_open_connections--;
                 } else if (client->agent_fd_poll[i] != CLOSED) {
                     all_closed = 0;
                 }
@@ -387,19 +404,10 @@ int poll_data_transfer(agent_t *agent, client_t *client) {
                 }
             }
             if (all_closed) {
-                //				printf("looks good so
-                // far...\n");
-
                 for (i = 0; i < client->num_parallel_connections; i++) {
                     for (j = 0; j < client->transfer_request->queue_size; j++) {
-                        // for(j = 0; j < MAX_QUEUE_SIZE; j++) {
                         if (client->buffered_packet[i][j].in_use) {
                             all_closed = 0;
-                            //							printf("FAILED
-                            //%d
-                            //%d\n",
-                            // i,
-                            // j);
                         }
                     }
                 }
@@ -409,23 +417,9 @@ int poll_data_transfer(agent_t *agent, client_t *client) {
             }
         }
 
-        /* Find the transfer request hash to determine agent type */
-        //        client_hash_t *iter_hash;
-        //        transfer_request_t *transfer_request_hash = NULL;
-        //        for (iter_hash = agent->clients_hashes; iter_hash != NULL;
-        //             iter_hash = iter_hash->hh.next) {
-        //            HASH_FIND_INT(agent->controller.requests,
-        //                          iter_hash->client->uuid,
-        //                          transfer_request_hash);
-        //            if (transfer_request_hash == NULL) {
-        //                printf("ERROR did not find transfer requst id\n");
-        //            }
-        //        }
-
         if (all_closed) {
             send_controller_termination_message(client, &agent->discovery);
             printf("Everything has been closed!\n");
-            // getinfo(client);
             exit(1);
         }
 
