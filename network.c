@@ -396,7 +396,7 @@ int create_listen_sockets(agent_t *agent) {
             struct linger linger = { 0 };
             linger.l_onoff = 1;
             linger.l_linger = 30;
-            if (setsockopt(client->agent_sock[i], SOL_SOCKET,
+            if (setsockopt(agent->listen_fds.agent_listen_sock[i], SOL_SOCKET,
                            SO_LINGER, (const char *) &linger, sizeof(linger)) == -1) {
                 perror("setsockopt(...,SO_LINGER,...)");
             }
