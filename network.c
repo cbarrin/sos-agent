@@ -356,6 +356,14 @@ int create_listen_sockets(agent_t *agent) {
             exit(1);
         }
 
+        struct linger linger = { 0 };
+        linger.l_onoff = 1;
+        linger.l_linger = 30;
+        if (setsockopt(client->agent_sock[i], SOL_SOCKET,
+                       SO_LINGER, (const char *) &linger, sizeof(linger)) == -1) {
+            perror("setsockopt(...,SO_LINGER,...)");
+        }
+
         listen(agent->listen_fds.host_listen_sock, BACKLOG);
 
         agent->listen_fds.event_host.events = EPOLLIN;

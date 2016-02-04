@@ -374,19 +374,7 @@ int poll_data_transfer(agent_t *agent, client_t *client) {
             for (i = 0; i < client->num_parallel_connections; i++) {
                 if (!client->packet[i].host_packet_size) {
                     if (num_open_connections < 3) {
-                        struct linger linger = { 0 };
 
-                        linger.l_onoff = 1;
-                        linger.l_linger = 30;
-                        int status = setsockopt(client->agent_sock[i],
-                                            SOL_SOCKET, SO_LINGER,
-                                            (const char *) &linger,
-                                            sizeof(linger));
-
-                        if (-1 == status)
-                        {
-                            perror("setsockopt(...,SO_LINGER,...)");
-                        }
                     }
                     close(client->agent_sock[i]);
                     client->agent_fd_poll[i] = CLOSED;
